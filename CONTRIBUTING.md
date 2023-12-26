@@ -13,8 +13,8 @@ Please note we have a code of conduct and we plead you to follow it.
 To make the life of all of us more comfortable, we want to ensure that our project is neat and tidy (for the most part at least). This is why a code of conduct is needed.
 
 - Follow the [Recommended Asset Naming Conventions](https://docs.unrealengine.com/4.27/en-US/ProductionPipelines/AssetNaming/) by Epic Games. The only current exception is that instead of `WBP_` (Widget Blueprint) we use `W_` (Widget).
-- Avoid modifying unnecessary files. If you need to make changes to a file, don't feel afraid to do so. However if a change to a file is miniscule or unnecessary, we plea you revert and not commit it. This is to reduce the chance of merge conflicts, which are a rather common occurence due to unreal engine's use of binary files for assets.
-- Split your pull requests based on the features they implement. We would rather have multiple smaller pull requests with a single feature than one big pull request with all features.
+- Avoid modifying unnecessary files. If you need to make changes to a file, don't feel afraid to do so. However if a change to a file is miniscule or unnecessary, we plea you revert and not commit it. This is to reduce the chance of merge conflicts, which are a rather common occurence due to unreal engine's usage of binary files for assets.
+- Split your pull requests based on the features they implement. We rather would have multiple smaller pull requests with a single feature than one big pull request with all features.
 - Stay conform to our [License](https://github.com/RadioArtz/scp-project-unreal/blob/main/License.txt), this includes all assets you may import.
 - Do not use marketplace assets.
 
