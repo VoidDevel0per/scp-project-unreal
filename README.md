@@ -28,11 +28,11 @@
 
 
 ## <img src="https://cdn.discordapp.com/emojis/1055803759831294013.png" width="20px" height="20px"> 》Project file and contribution information:
-- This project uses Unreal Engine 5.3.2
+- This project uses Unreal Engine 4.27 with the AMD FSR plugin. [License](https://github.com/EminShadow/SCP-Secret-Shadow/blob/main/Plugins/FSR/license.txt)
 - When working on some major system, create an issue to inform others that you are working on it and keep it updated if you stop working on it. This is to avoid two people spending a lot of time just to find out that someone else has been working on the same thing. You can of course still work on things that others are already working on if you want to.
 - The project has C++ enabled.
 - **No external marketplace assets** are to be used!
-- Do **NOT** contribute assets and/or code that don't fall under the [License](https://github.com/EminShadow/SCP-LE/blob/main/License.txt).
+- Do **NOT** contribute assets and/or code that don't fall under the [License](https://github.com/EminShadow/SCP-Secret-Shadow/blob/main/License.txt).
 - Forks of the project are to follow the same License terms as this Project.
 
 
