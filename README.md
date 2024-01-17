@@ -36,7 +36,20 @@
 - Forks of the project are to follow the same License terms as this Project.
 
 
- 
+
+### HELP MY PROJECT IS NOT COMPILING!!
+Of course it isn't, welcome to C++. Here’s how to fix it:
+1.    Make sure to fetch a working version
+2.    Delete the “Intermediate” folder inside the project folder
+3.    Right-click the project file and click on “Generate Visual Studio project files”
+4.    Open the solution file
+5.    Right-click “scppu” inside the solution-explorer
+6.    Click on “Set as start-up project”
+7.    Select “Development Editor” in the combo box located at the top beneath the “Build” menu
+8.    Start local debug (sometimes needs multiple tries until it actually works because C++ stuff) 
+This should generally fix it. If it doesn't, join the Discord and we'll try to help you out.
+
+
 
 
 ## <img src="https://cdn.discordapp.com/emojis/1028680849195020308.png" width="25px" height="25px">》Screenshots
