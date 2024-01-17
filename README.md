@@ -36,7 +36,7 @@
 - Forks of the project are to follow the same License terms as this Project.
 
 
-## <img src="https://cdn.discordapp.com/emojis/1055803759831294013.png" width="20px" height="20px"> 》HELP MY PROJECT IS NOT COMPILING!!
+## <img src="https://discord.com/assets/1d573145f04802366fbc.svg" width="20px" height="20px"> 》HELP MY PROJECT IS NOT COMPILING!!
 Of course it isn't, welcome to C++. Here’s how to fix it:
 1.    Make sure to fetch a working version
 2.    Delete the “Intermediate” folder inside the project folder
