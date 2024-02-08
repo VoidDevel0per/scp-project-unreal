@@ -10,8 +10,7 @@ public class scppu : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "UMG", "DeveloperSettings", "RenderCore", "Renderer", "RHI", "Http",  "Slate", "SlateCore"});
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
-		bEnableUndefinedIdentifierWarnings = false;
+		PrivateDependencyModuleNames.AddRange(new string[] { });
 		bool bShouldDeterminGitStatus = true;
 
 		// Determin git active commit hash and state to be used in engine (see UGitStateBlueprintLibrary for more information)
@@ -32,7 +31,6 @@ public class scppu : ModuleRules
 				Console.WriteLine("Using 'git show' to determine commit hash to be used in engine");
 				StartInfo.Arguments = "show --quiet --format=%H";
 				Proc = Process.Start(StartInfo);
-				Proc.WaitForExit();
 
 				GitError = Proc.StandardError.ReadToEnd().Trim();
 				if (GitError.Contains("fatal: not a git repository"))
@@ -46,12 +44,12 @@ public class scppu : ModuleRules
 
 				string GitCommitHash = Proc.StandardOutput.ReadToEnd().Trim();
 				Console.WriteLine("Detected git commit hash: " + GitCommitHash);
+				Proc.WaitForExit();
 
 				// Determin if local changes exist
 				Console.WriteLine("Using 'git status' to determine commit hash to be used in engine");
 				StartInfo.Arguments = "status --porcelain";
 				Proc = Process.Start(StartInfo);
-				Proc.WaitForExit();
 
 				GitError = Proc.StandardError.ReadToEnd().Trim();
 				if (GitError.Length > 0)
@@ -61,6 +59,7 @@ public class scppu : ModuleRules
 
 				bool bHasLocalChanges = Proc.StandardOutput.ReadToEnd().Length > 0;
 				Console.WriteLine("Detected git has local changes: " + bHasLocalChanges);
+				Proc.WaitForExit();
 
 				// Add definitions to be used in cpp code
 				PublicDefinitions.Add("PROJECT_GIT_COMMIT_HASH=\"" + GitCommitHash + "\"");
