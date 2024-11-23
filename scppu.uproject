@@ -10,7 +10,27 @@
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"Engine",
+				"CoreUObject",
+				"scppuGit"
+			]
+		},
+		{
+			"Name": "scppuGit",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
 				"CoreUObject"
+			]
+		},
+		{
+			"Name": "scppuEditor",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit",
+			"AdditionalDependencies": [
+				"Engine",
+				"CoreUObject",
+				"scppu"
 			]
 		}
 	],
@@ -210,7 +230,12 @@
 			]
 		},
 		{
-			"Name": "GPULightmass",
+			"Name": "DLSS",
+			"Enabled": true,
+			"MarketplaceURL": "https://www.unrealengine.com/marketplace/en-US/product/nvidia-dlss"
+		},
+		{
+			"Name": "GPULightmassExtended",
 			"Enabled": true
 		}
 	],
