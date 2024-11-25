@@ -6,26 +6,6 @@
 #include "GameFramework/GameUserSettings.h"
 #include "ExtendedGameUserSettings.generated.h"
 
-UENUM(BlueprintType)
-enum class EUpscalerType : uint8
-{
-	None = 0 UMETA(DisplayName = "None"),
-	FSR1 = 1 UMETA(DisplayName = "FSR 1"),
-	FSR2 = 2 UMETA(DisplayName = "FSR 2"),
-	DLSS3 = 3 UMETA(DisplayName = "DLSS 3.5"),
-	//TAAU = 4 UMETA(DisplayName = "TAAU")
-};
-
-UENUM(BlueprintType)
-enum class EUpscalerQualityMode : uint8
-{
-	Native = 0 UMETA(DisplayName = "Native"),
-	Quality = 1 UMETA(DisplayName = "Quality"),
-	Balanced = 2 UMETA(DisplayName = "Balanced"),
-	Performance = 3 UMETA(DisplayName = "Performance"),
-	UltraPerformance = 4 UMETA(DisplayName = "Ultra Performance")
-};
-
 UCLASS()
 class SCPPU_API UExtendedGameUserSettings : public UGameUserSettings
 {
@@ -33,32 +13,29 @@ class SCPPU_API UExtendedGameUserSettings : public UGameUserSettings
 	
 	//// Properties ////
 protected:
+	// If true, FSR 1 will be used
 	UPROPERTY(config)
-		EUpscalerType ActiveUpscaler = EUpscalerType::None;
+		bool bUseFSR1 = false;
 
+	/**
+	 * Quality level for FSR 2
+	 *	0 = Disabled
+	 *	1 = Quality
+	 *	...
+	 *	4 = Ultra Performance
+	 */
 	UPROPERTY(config)
-		EUpscalerQualityMode UpscalerQualityMode = EUpscalerQualityMode::Quality;
-
-	UPROPERTY(config)
-		int ScreenPercentage = 100;
+		int32 FSR2QualityLevel = 0;
 
 	// Gamma level to use. Higher value = more brightness
 	UPROPERTY(config)
 		float ScreenGammaLevel = 2.2f;
 
-	// If true, Volumetric Fog will be used
-	UPROPERTY(config)
-	bool bUseVolumetric = true;
-
 	// If true, texture streaming will be used
 	UPROPERTY(config)
 		bool bUseTextureStreaming = true;
 
-	// if true, tesselation will be used (currently not working)
-	UPROPERTY(config)
-		bool bUseTessellation = true;
-
-	// If true camera shakes can play
+	// If true camera shake triggered by Elevators for example can play.
 	UPROPERTY(config)
 		bool bUseCameraShake = true;
 
@@ -66,9 +43,11 @@ protected:
 	UPROPERTY(config)
 		float ViewBobStrength = 1.f;
 
-	// Controls the FOV
 	UPROPERTY(config)
 		int FOV = 80;
+
+	UPROPERTY(config)
+		bool bUseTesselation = true;
 
 	//// Functions ////	
 public:
@@ -76,28 +55,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Settings)
 		static UExtendedGameUserSettings* GetExtendedGameUserSettings();
 
+	// Sets the user setting for FSR1
 	UFUNCTION(BlueprintCallable, Category = Settings)
-		TArray<EUpscalerType> GetSupportedUpscalers() const;
+		void SetFSR1Enabled(bool bEnable);
 
+	// Returns the user setting for FSR1
 	UFUNCTION(BlueprintCallable, Category = Settings)
-		void SetActiveUpscaler(EUpscalerType NewActiveUpscaler);
+		bool IsFSR1Enabled() const;
 
+	// Sets the user setting for FSR2 (0..4, higher is stronger)
+	// @param Value 0:disabled, 1:quality, 2:balanced, 3:performance, 4:ultra performance (gets clamped if needed)
 	UFUNCTION(BlueprintCallable, Category = Settings)
-		EUpscalerType GetActiveUpscaler() const;
+		void SetFSR2Quality(int32 Value);
 
+	// Returns the user setting for FSR2 (0..4, higher is stronger)
 	UFUNCTION(BlueprintCallable, Category = Settings)
-		void SetUpscalerQualityMode(EUpscalerQualityMode NewUpscalerQualityMode);
-
-	UFUNCTION(BlueprintCallable, Category = Settings)
-		EUpscalerQualityMode GetUpscalerQualityMode() const;
-
-	// Sets the user setting for screen percentage as a 25..200 value
-	UFUNCTION(BlueprintCallable, Category = Settings)
-		void SetScreenPercentage(int Value);
-
-	// Returns the user setting for screen percentage as a 25..200 value
-	UFUNCTION(BlueprintCallable, Category = Settings)
-		int GetScreenPercentage() const;
+		int GetFSR2Quality() const;
 
 	// Sets the user setting for screen gamma as a 0.5f..5.0f value
 	UFUNCTION(BlueprintCallable, Category = Settings)
@@ -107,14 +80,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Settings)
 		float GetScreenGamma() const;
 
-	// Returns the user setting for volumetric fog
-	UFUNCTION(BlueprintCallable, Category = Settings)
-	bool IsVolumetricFogEnabled() const;
-
-	// Sets the user setting for Volumetric Fog
-	UFUNCTION(BlueprintCallable, Category = Settings)
-	void SetVolumetricFogEnabled(bool bEnabled);
-
 	// Sets the user setting for texture streaming
 	UFUNCTION(BlueprintCallable, Category = Settings)
 		void SetTextureStreamingEnabled(bool bEnabled);
@@ -122,13 +87,6 @@ public:
 	// Returns the user setting for texture streaming
 	UFUNCTION(BlueprintCallable, Category = Settings)
 		bool IsTextureStreamingEnabled() const;
-
-	// Sets the user setting for tessellation
-	UFUNCTION(BlueprintCallable, Category = Settings, meta = (ToolTip = "!!! Disabling tessellation currently doesn't work and the option may be removed in the future !!!"))
-		void SetTessellationEnabled(bool bEnabled);
-
-	UFUNCTION(BlueprintCallable, Category = Settings, meta = (ToolTip = "!!! Disabling tessellation currently doesn't work and the option may be removed in the future !!!"))
-		bool IsTessellationEnabled() const;
 
 	// Sets if Camera shake such as from Elevators is enabled.
 	UFUNCTION(BlueprintCallable, Category = "Settings | Gameplay")
@@ -146,17 +104,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Settings | Gameplay")
 		float GetViewbobStrength() const;
 
-	// Sets the user setting for FOV as a 10..130 value
-	UFUNCTION(BlueprintCallable, Category = "Settings | Gameplay")
-		void SetFOV(int Value);
-
-	// Returns the user setting for FOV as a 10..130 value
 	UFUNCTION(BlueprintCallable, Category = "Settings | Gameplay")
 		int GetFOV() const;
 
-	virtual void ApplyNonResolutionSettings() override;
+	UFUNCTION(BlueprintCallable, Category = "Settings | Gameplay")
+		void SetFOV(int Value);
 
-protected:
-	virtual void DisableAllUpscalers();
-	virtual void EnableActiveUpscaler();
+	UFUNCTION(BlueprintCallable, Category = "Settings | Gameplay")
+		void SetTesselation(bool bEnabled);
+
+	UFUNCTION(BlueprintCallable, Category = "Settings | Gameplay")
+		bool GetTesselation() const;
+
+	virtual void ApplyNonResolutionSettings() override;
 };

@@ -6,16 +6,19 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "GitStateBlueprintLibrary.generated.h"
 
+/**
+ * 
+ */
 UCLASS()
-class SCPPUGIT_API UGitStateBlueprintLibrary : public UBlueprintFunctionLibrary
+class SCPPU_API UGitStateBlueprintLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 	
 	//// Functions ////	
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-		static FString GetCompiledGitCommitHash();
+		static FString GetActiveGitCommitHash();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-		static bool CompiledGitCommitHasLocalChanges();
+		static bool HasActiveGitCommitLocalChanges();
 };
