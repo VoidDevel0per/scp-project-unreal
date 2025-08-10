@@ -203,7 +203,7 @@ void UExtendedGameUserSettings::DisableAllUpscalers()
 				break;
 
 			case EUpscalerType::FSR2:
-				ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.Enabled"))->Set(0, EConsoleVariableFlags::ECVF_SetByGameSetting);
+				ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.Enabled"))->Set(0, EConsoleVariableFlags::ECVF_SetByCode);
 				break;
 				/*
 			case EUpscalerType::DLSS3:
@@ -224,7 +224,7 @@ void UExtendedGameUserSettings::EnableActiveUpscaler()
 {
 	const IConsoleManager& ConsoleManager = IConsoleManager::Get();
 	FString ConfigSection = TEXT("SystemSettings");
-
+	
 #if WITH_EDITOR
 	if (GIsEditor)
 	{
@@ -232,10 +232,11 @@ void UExtendedGameUserSettings::EnableActiveUpscaler()
 	}
 #endif
 
+
 	switch (this->GetActiveUpscaler())
 	{
 		case EUpscalerType::None:
-			ConsoleManager.FindConsoleVariable(TEXT("r.ScreenPercentage"))->Set(this->GetScreenPercentage(), EConsoleVariableFlags::ECVF_SetByGameSetting);
+			ConsoleManager.FindConsoleVariable(TEXT("r.ScreenPercentage"))->Set(this->GetScreenPercentage(), EConsoleVariableFlags::ECVF_SetByCode);
 			break;
 		case EUpscalerType::FSR1:
 		{
@@ -247,8 +248,9 @@ void UExtendedGameUserSettings::EnableActiveUpscaler()
 			};
 
 			const int ResolutionScale = UpscalerQualityModeToFSR1ScreenPercentage[this->GetUpscalerQualityMode()];
-			ConsoleManager.FindConsoleVariable(TEXT("r.ScreenPercentage"))->Set(ResolutionScale, EConsoleVariableFlags::ECVF_SetByGameSetting);
+			ConsoleManager.FindConsoleVariable(TEXT("r.ScreenPercentage"))->Set(ResolutionScale, EConsoleVariableFlags::ECVF_SetByCode);
 			ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR.Enabled"))->Set(1, EConsoleVariableFlags::ECVF_SetByGameSetting);
+			ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.QualityMode"))->Set(1, EConsoleVariableFlags::ECVF_SetByCode); //If we dont do this, the user might get weirdly cropped visuals
 			break;
 		}
 		case EUpscalerType::FSR2:
@@ -261,9 +263,10 @@ void UExtendedGameUserSettings::EnableActiveUpscaler()
 			   };
 
 			   const int QualityMode = (UpscalerQualityModeToFSR2QualityMode[this->GetUpscalerQualityMode()]);
-			   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.Enabled"))->Set(1, EConsoleVariableFlags::ECVF_SetByGameSetting);
-			   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.QualityMode"))->Set(QualityMode, EConsoleVariableFlags::ECVF_SetByGameSetting);
-
+			   //ok cool LastSetBy: ProjectSetting was taking priority over SetByGameSetting.
+			   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.Enabled"))->Set(1, EConsoleVariableFlags::ECVF_SetByCode);
+			   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.QualityMode"))->Set(QualityMode, EConsoleVariableFlags::ECVF_SetByCode);
+			   
 			   break;
 		}
 		/*

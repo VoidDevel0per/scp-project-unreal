@@ -19,11 +19,10 @@ enum class EUpscalerType : uint8
 UENUM(BlueprintType)
 enum class EUpscalerQualityMode : uint8
 {
-	Native = 0 UMETA(DisplayName = "Native"),
-	Quality = 1 UMETA(DisplayName = "Quality"),
-	Balanced = 2 UMETA(DisplayName = "Balanced"),
-	Performance = 3 UMETA(DisplayName = "Performance"),
-	UltraPerformance = 4 UMETA(DisplayName = "Ultra Performance")
+	Quality = 0 UMETA(DisplayName = "Quality"),
+	Balanced = 1 UMETA(DisplayName = "Balanced"),
+	Performance = 2 UMETA(DisplayName = "Performance"),
+	UltraPerformance = 3 UMETA(DisplayName = "Ultra Performance")
 };
 
 UCLASS()
