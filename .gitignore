@@ -1,5 +1,6 @@
 # DLSS plugin files
 Plugins/DLSS/*
+Plugins/GPULightmassExtended/*
 
 # Visual Studio 2015 user specific files
 .vs/
