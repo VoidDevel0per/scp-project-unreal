@@ -239,40 +239,30 @@ void UExtendedGameUserSettings::EnableActiveUpscaler()
 			break;
 		case EUpscalerType::FSR1:
 		{
-			const static TMap<EUpscalerQualityMode, int> UpscalerQualityModeToScreenPercentage = {
-				//{EUpscalerQualityMode::Native, 100},
+			const static TMap<EUpscalerQualityMode, int> UpscalerQualityModeToFSR1ScreenPercentage = {
 				{EUpscalerQualityMode::Quality, 77},
 				{EUpscalerQualityMode::Balanced, 67},
 				{EUpscalerQualityMode::Performance, 59},
 				{EUpscalerQualityMode::UltraPerformance, 50}
 			};
 
-			const int ResolutionScale = UpscalerQualityModeToScreenPercentage[this->GetUpscalerQualityMode()];
+			const int ResolutionScale = UpscalerQualityModeToFSR1ScreenPercentage[this->GetUpscalerQualityMode()];
 			ConsoleManager.FindConsoleVariable(TEXT("r.ScreenPercentage"))->Set(ResolutionScale, EConsoleVariableFlags::ECVF_SetByGameSetting);
 			ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR.Enabled"))->Set(1, EConsoleVariableFlags::ECVF_SetByGameSetting);
 			break;
 		}
 		case EUpscalerType::FSR2:
 		{
-			   const static TMap<EUpscalerQualityMode, int> UpscalerQualityModeToFSRQualityMode = {
-				  // {EUpscalerQualityMode::Native, 0},
+			   const static TMap<EUpscalerQualityMode, int> UpscalerQualityModeToFSR2QualityMode = {
 				   {EUpscalerQualityMode::Quality, 1},
 				   {EUpscalerQualityMode::Balanced, 2},
 				   {EUpscalerQualityMode::Performance, 3},
 				   {EUpscalerQualityMode::UltraPerformance, 4}
 			   };
 
-			   const int QualityMode = (UpscalerQualityModeToFSRQualityMode[this->GetUpscalerQualityMode()]);/*
-			   if (QualityMode == -1)
-			   {
-				   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.QualityMode"))->Set(3, EConsoleVariableFlags::ECVF_SetByGameSetting);
-				   ConsoleManager.FindConsoleVariable(TEXT("r.ScreenPercentage"))->Set(100, EConsoleVariableFlags::ECVF_SetByGameSetting);
-			   }
-			   else
-			   {*/
-				   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.Enabled"))->Set(1, EConsoleVariableFlags::ECVF_SetByGameSetting);
-				   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.QualityMode"))->Set(QualityMode, EConsoleVariableFlags::ECVF_SetByGameSetting);
-			   //}
+			   const int QualityMode = (UpscalerQualityModeToFSR2QualityMode[this->GetUpscalerQualityMode()]);
+			   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.Enabled"))->Set(1, EConsoleVariableFlags::ECVF_SetByGameSetting);
+			   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.QualityMode"))->Set(QualityMode, EConsoleVariableFlags::ECVF_SetByGameSetting);
 
 			   break;
 		}
