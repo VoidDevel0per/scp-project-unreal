@@ -32,7 +32,7 @@ public class scppuGit : ModuleRules
 				Console.WriteLine("Using 'git show' to determine commit hash to be used in engine");
 				StartInfo.Arguments = "show --quiet --format=%H";
 				Proc = Process.Start(StartInfo);
-
+				Proc.WaitForExit();
 				GitError = Proc.StandardError.ReadToEnd().Trim();
 				if (GitError.Contains("fatal: not a git repository"))
 				{
@@ -45,22 +45,25 @@ public class scppuGit : ModuleRules
 
 				string GitCommitHash = Proc.StandardOutput.ReadToEnd().Trim();
 				Console.WriteLine("Detected git commit hash: " + GitCommitHash);
-				Proc.WaitForExit();
+				
 
 				// Determin if local changes exist
 				Console.WriteLine("Using 'git status' to determine commit hash to be used in engine");
 				StartInfo.Arguments = "status --porcelain";
 				Proc = Process.Start(StartInfo);
 
-				GitError = Proc.StandardError.ReadToEnd().Trim();
-				if (GitError.Length > 0)
-				{
-					throw new Exception("git error: " + GitError);
-				}
-
-				bool bHasLocalChanges = Proc.StandardOutput.ReadToEnd().Length > 0;
-				Console.WriteLine("Detected git has local changes: " + bHasLocalChanges);
+				// Read both streams BEFORE waiting for exit
+				string statusOutput = Proc.StandardOutput.ReadToEnd();
+				string statusError = Proc.StandardError.ReadToEnd();
 				Proc.WaitForExit();
+
+				if (statusError.Length > 0)
+				{
+					throw new Exception("git error: " + statusError);
+				}
+				bool bHasLocalChanges = statusOutput.Length > 0;
+				Console.WriteLine("Detected git has local changes: " + bHasLocalChanges);
+				
 
 				// Add definitions to be used in cpp code
 				PublicDefinitions.Add("GIT_COMPILED_COMMIT_HASH=\"" + GitCommitHash + "\"");
