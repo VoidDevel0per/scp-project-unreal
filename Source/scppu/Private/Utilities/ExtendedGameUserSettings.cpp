@@ -13,7 +13,7 @@ TArray<EUpscalerType> UExtendedGameUserSettings::GetSupportedUpscalers() const
 	const TMap<FName, EUpscalerType> ModuleNameToUpscalerType = {
 		{"FSR", EUpscalerType::FSR1},
 		{"FSR2", EUpscalerType::FSR2},
-		{"DLSS", EUpscalerType::DLSS3}
+		//{"DLSS", EUpscalerType::DLSS3}
 	};
 
 	for (auto Kvp : ModuleNameToUpscalerType)
@@ -205,12 +205,12 @@ void UExtendedGameUserSettings::DisableAllUpscalers()
 			case EUpscalerType::FSR2:
 				ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.Enabled"))->Set(0, EConsoleVariableFlags::ECVF_SetByGameSetting);
 				break;
-
+				/*
 			case EUpscalerType::DLSS3:
 				ConsoleManager.FindConsoleVariable(TEXT("r.NGX.DLAA.Enable"))->Set(0, EConsoleVariableFlags::ECVF_SetByGameSetting);
 				ConsoleManager.FindConsoleVariable(TEXT("r.NGX.DLSS.Enable"))->Set(0, EConsoleVariableFlags::ECVF_SetByGameSetting);
 				break;
-
+				*/
 			default:
 				checkNoEntry();
 		}
@@ -240,7 +240,7 @@ void UExtendedGameUserSettings::EnableActiveUpscaler()
 		case EUpscalerType::FSR1:
 		{
 			const static TMap<EUpscalerQualityMode, int> UpscalerQualityModeToScreenPercentage = {
-				{EUpscalerQualityMode::Native, 100},
+				//{EUpscalerQualityMode::Native, 100},
 				{EUpscalerQualityMode::Quality, 77},
 				{EUpscalerQualityMode::Balanced, 67},
 				{EUpscalerQualityMode::Performance, 59},
@@ -255,27 +255,28 @@ void UExtendedGameUserSettings::EnableActiveUpscaler()
 		case EUpscalerType::FSR2:
 		{
 			   const static TMap<EUpscalerQualityMode, int> UpscalerQualityModeToFSRQualityMode = {
-				   {EUpscalerQualityMode::Native, -1},
-				   {EUpscalerQualityMode::Quality, 3},
+				  // {EUpscalerQualityMode::Native, 0},
+				   {EUpscalerQualityMode::Quality, 1},
 				   {EUpscalerQualityMode::Balanced, 2},
-				   {EUpscalerQualityMode::Performance, 1},
-				   {EUpscalerQualityMode::UltraPerformance, 0}
+				   {EUpscalerQualityMode::Performance, 3},
+				   {EUpscalerQualityMode::UltraPerformance, 4}
 			   };
 
-			   const int QualityMode = (UpscalerQualityModeToFSRQualityMode[this->GetUpscalerQualityMode()]);
+			   const int QualityMode = (UpscalerQualityModeToFSRQualityMode[this->GetUpscalerQualityMode()]);/*
 			   if (QualityMode == -1)
 			   {
 				   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.QualityMode"))->Set(3, EConsoleVariableFlags::ECVF_SetByGameSetting);
 				   ConsoleManager.FindConsoleVariable(TEXT("r.ScreenPercentage"))->Set(100, EConsoleVariableFlags::ECVF_SetByGameSetting);
 			   }
 			   else
-			   {
+			   {*/
 				   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.Enabled"))->Set(1, EConsoleVariableFlags::ECVF_SetByGameSetting);
 				   ConsoleManager.FindConsoleVariable(TEXT("r.FidelityFX.FSR2.QualityMode"))->Set(QualityMode, EConsoleVariableFlags::ECVF_SetByGameSetting);
-			   }
+			   //}
 
 			   break;
 		}
+		/*
 		case EUpscalerType::DLSS3:
 		{
 			const static TMap<EUpscalerQualityMode, int> UpscalerQualityModeToDLSSQualityMode = {
@@ -303,6 +304,7 @@ void UExtendedGameUserSettings::EnableActiveUpscaler()
 
 			break;	
 		}
+		*/
 		default:
 			checkNoEntry();
 	}

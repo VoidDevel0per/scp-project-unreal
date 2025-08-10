@@ -11,8 +11,8 @@ enum class EUpscalerType : uint8
 {
 	None = 0 UMETA(DisplayName = "None"),
 	FSR1 = 1 UMETA(DisplayName = "FSR 1"),
-	FSR2 = 2 UMETA(DisplayName = "FSR 2"),
-	DLSS3 = 3 UMETA(DisplayName = "DLSS 3.5"),
+	FSR2 = 2 UMETA(DisplayName = "FSR 2.2"),
+	//DLSS3 = 3 UMETA(DisplayName = "DLSS 3.5"),
 	//TAAU = 4 UMETA(DisplayName = "TAAU")
 };
 
