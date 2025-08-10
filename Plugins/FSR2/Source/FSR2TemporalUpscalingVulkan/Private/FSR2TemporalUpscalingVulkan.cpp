@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,9 @@
 #include "CoreMinimal.h"
 #include "Interfaces/IPluginManager.h"
 
-#include "VulkanRHI/Private/VulkanRHIPrivate.h"
-#include "VulkanRHI/Private/VulkanContext.h"
-#include "VulkanRHI/Private/VulkanResources.h"
+#include "VulkanRHIPrivate.h"
+#include "VulkanContext.h"
+#include "VulkanResources.h"
 
 IMPLEMENT_MODULE(FFSR2TemporalUpscalingVulkanModule, FSR2TemporalUpscalingVulkan)
 

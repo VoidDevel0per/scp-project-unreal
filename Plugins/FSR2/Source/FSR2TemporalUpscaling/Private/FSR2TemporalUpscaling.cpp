@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,9 @@ IMPLEMENT_MODULE(FFSR2TemporalUpscalingModule, FSR2TemporalUpscaling)
 #define LOCTEXT_NAMESPACE "FSR2"
 
 DEFINE_LOG_CATEGORY(LogFSR2);
+#if DO_CHECK || DO_GUARD_SLOW || DO_ENSURE
+DEFINE_LOG_CATEGORY(LogFSR2API);
+#endif // DO_CHECK || DO_GUARD_SLOW || DO_ENSURE
 
 void FFSR2TemporalUpscalingModule::StartupModule()
 {
@@ -59,7 +62,7 @@ FFSR2TemporalUpscaler* FFSR2TemporalUpscalingModule::GetFSR2Upscaler() const
 	return TemporalUpscaler.Get();
 }
 
-ITemporalUpscaler* FFSR2TemporalUpscalingModule::GetTemporalUpscaler() const
+FFSR2TemporalUpscaler* FFSR2TemporalUpscalingModule::GetTemporalUpscaler() const
 {
 	return TemporalUpscaler.Get();
 }
