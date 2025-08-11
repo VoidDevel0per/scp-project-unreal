@@ -29,7 +29,7 @@ public:
 
 private:
 	UPROPERTY(VisibleAnywhere)
-		FString Formula = "(Base value + Sum of all additon values) * (1 + Sum of all multiplications values) * (1 - Sum of all reduction values)";
+		FString Formula = "(Base value + Sum of all additon values) * (Product of all multiplicative values) * (1 - Sum of all reduction values)";
 };
 
 UCLASS(Config = Game, defaultconfig, meta = (DisplayName = "Float Attribute Modifier"))

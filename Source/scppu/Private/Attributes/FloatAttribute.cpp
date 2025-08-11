@@ -66,8 +66,9 @@ void FFloatAttribute::ForceModifierRecalculation()
 {
 	UDataTable* DataTable = GetDefault<UFloatAttributeModifierSettings>()->AttributeModifierDataTable.LoadSynchronous();
 	int AdditionSum = 0;
-	int MultiplicationSum = 0;
+	int MultiplicationProduct = 1;
 	int ReductionSum = 0;
+	
 
 	for (auto Elem : this->ModifierKeys)
 	{
@@ -83,7 +84,7 @@ void FFloatAttribute::ForceModifierRecalculation()
 				AdditionSum = AdditionSum + Modifier->Value;
 				break;
 			case EFloatAttributeModifierMode::Multiplication:
-				MultiplicationSum = MultiplicationSum + Modifier->Value;
+				MultiplicationProduct *= Modifier->Value;
 				break;
 			case EFloatAttributeModifierMode::Reduction:
 				ReductionSum = ReductionSum + Modifier->Value;
@@ -93,7 +94,7 @@ void FFloatAttribute::ForceModifierRecalculation()
 		}
 	}
 
-	this->CachedFinalValue = (this->BaseValue + AdditionSum) * (1 + MultiplicationSum) * (1 - ReductionSum);
+	this->CachedFinalValue = (this->BaseValue + AdditionSum) * MultiplicationProduct * (1 - ReductionSum);
 }
 
 float UAttributeFloatFunctions::GetBaseValue(FFloatAttribute Attribute)
