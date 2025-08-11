@@ -14,13 +14,13 @@ UPlayerAttributeComponent::UPlayerAttributeComponent()
 
 	this->MinValue = FFloatAttribute();
 	this->MaxValue = FFloatAttribute();
-	this->RegenrationRate = FFloatAttribute();
+	this->RegenerationRate = FFloatAttribute();
 	this->RegenerationDelay = FFloatAttribute();
 }
 
-void UPlayerAttributeComponent::SetCurrentValue(float NewValue, bool bSkipRegenrationDelay)
+void UPlayerAttributeComponent::SetCurrentValue(float NewValue, bool bSkipRegenerationDelay)
 {
-	if (!bSkipRegenrationDelay && this->RegenerationDelay.GetFinalValue() > 0)
+	if (!bSkipRegenerationDelay && this->RegenerationDelay.GetFinalValue() > 0)
 	{
 		FTimerDelegate TimerCallback;
 		TimerCallback.BindLambda([this]()
@@ -51,7 +51,7 @@ void UPlayerAttributeComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 	if (!this->bDelayRegeneration)
 	{
-		this->SetCurrentValue(this->CurrentValue + (this->RegenrationRate.GetFinalValue() * DeltaTime), true);
+		this->SetCurrentValue(this->CurrentValue + (this->RegenerationRate.GetFinalValue() * DeltaTime), true);
 	}
 
 	if (this->CurrentValue <= this->MinValue.GetFinalValue() && !this->bMinValueReached)
