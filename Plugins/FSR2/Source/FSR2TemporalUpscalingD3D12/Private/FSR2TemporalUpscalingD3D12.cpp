@@ -1,6 +1,6 @@
 // This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +40,16 @@
 #define FD3DGPUProfiler FD3D12GPUProfiler
 #define FRangeAllocator FRangeAllocator_D3D12
 
+#ifndef WITH_NVAPI
+#define WITH_NVAPI 0
+#endif // WITH_NVAPI
+#ifndef NV_AFTERMATH
+#define NV_AFTERMATH 0
+#endif // NV_AFTERMATH
+#ifndef INTEL_EXTENSIONS
+#define INTEL_EXTENSIONS 0
+#endif // INTEL_EXTENSIONS
+
 #include "D3D12RHIPrivate.h"
 #include "D3D12Util.h"
 
@@ -58,7 +68,7 @@
 #undef MAX_CONSTANT_BUFFER_SLOTS
 #undef FD3DGPUProfiler
 #undef FRangeAllocator
-#endif
+#endif // PLATFORM_WINDOWS
 
 IMPLEMENT_MODULE(FFSR2TemporalUpscalingD3D12Module, FSR2TemporalUpscalingD3D12)
 

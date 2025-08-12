@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -48,6 +48,8 @@ float ReactiveMaskReflectionScale;
 float ReactiveMaskRoughnessScale;
 float ReactiveMaskRoughnessBias;
 float ReactiveMaskReflectionLumaBias;
+float ReactiveHistoryTranslucencyBias;
+float ReactiveHistoryTranslucencyLumaBias;
 float ReactiveMaskTranslucencyBias;
 float ReactiveMaskTranslucencyLumaBias;
 float ReactiveMaskPreDOFTranslucencyScale;
@@ -75,13 +77,15 @@ void MainCS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_Group
 		float4 Output = float4(0.f, 0.f, 0.f, 0.f);
 		float4 BufferB = GBufferB[ThreadId];
 		float4 BufferD = GBufferD[ThreadId];
-		float4 FullSceneColor = SceneColor[ThreadId];
-		float4 SceneColorNoAlpha = SceneColorPreAlpha[ThreadId];
+		float4 FullSceneColor = saturate(SceneColor[ThreadId]);
+		float4 SceneColorNoAlpha = saturate(SceneColorPreAlpha[ThreadId]);
 		float CurrentDepth = InputDepth[ThreadId].x;
 
 		TexelUV = (float2(ThreadId.xy) + 0.5f) / (View.BufferSizeAndInvSize.xy + View.ViewRectMin.xy);
 		float4 Reflection = ReflectionTexture.SampleLevel(Sampler, TexelUV, 0);
+		
 		float4 Translucency = InputSeparateTranslucency.SampleLevel(Sampler, TexelUV, 0);
+
 		float2 TranslucencyContribution = float2(0.f, 0.f);
 
 		FGBufferData GBuffer = DecodeGBufferData(float4(0.f, 0.f, 0.f, 0.f),
@@ -119,7 +123,7 @@ void MainCS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_Group
 		float3 Delta = abs(FullSceneColor - SceneColorNoAlpha).xyz;
 		float PreDOFTranslucency = saturate(ReactiveMaskPreDOFTranslucencyMax ? max(Delta.x, max(Delta.y, Delta.z)) : length(Delta)) * ReactiveMaskPreDOFTranslucencyScale;
 		Translucency.xyz = max(Translucency.xyz, PreDOFTranslucency);
-		
+
 		// Add a falloff for roughness based on the largest capture radius, this is a cheat as we aren't using the actual capture position
 		float WorldDepth = ConvertFromDeviceZ(CurrentDepth);
 		float4 SvPosition = float4(ThreadId.xy, CurrentDepth, WorldDepth);
@@ -127,26 +131,29 @@ void MainCS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_Group
 		float NormalizedDistanceToCapture = saturate(length(TranslatedWorldPosition) / FurthestReflectionCaptureDistance);
 		Roughness = (FurthestReflectionCaptureDistance > 0.f) ? lerp(Roughness, 1.f, NormalizedDistanceToCapture) : Roughness;
 		
-		TranslucencyContribution.x = (1.f - Translucency.w) + (saturate(Luminance(Translucency.xyz)) * Translucency.w);
-		TranslucencyContribution.y = ((1.f - Translucency.w) * ReactiveMaskTranslucencyBias) + (ReactiveMaskTranslucencyLumaBias * saturate(Luminance(Translucency.xyz)) * Translucency.w);
+		TranslucencyContribution.x = ((1.f - Translucency.w) * ReactiveMaskTranslucencyBias) + (ReactiveMaskTranslucencyLumaBias * saturate(Luminance(Translucency.xyz)) * Translucency.w);
+		TranslucencyContribution.y = ((1.f - Translucency.w) * ReactiveHistoryTranslucencyBias) + (ReactiveHistoryTranslucencyLumaBias * saturate(Luminance(Translucency.xyz)) * Translucency.w);
 
 		// Fall off translucency beyond a certain distance if required, as we want to remove the skybox/backplanes that are typically placed far away and then composed as post-DOF translucency
 		float NormalizedDistanceToSurface = saturate(length(TranslatedWorldPosition) / ReactiveMaskTranslucencyMaxDistance);
 		TranslucencyContribution = (ReactiveMaskTranslucencyMaxDistance > 0.f) ? lerp(TranslucencyContribution, 0.f, float2(NormalizedDistanceToSurface, NormalizedDistanceToSurface)) : TranslucencyContribution;
 
-		Output.x = TranslucencyContribution.x;
 		Output.z = saturate((1.f - Roughness) * ReactiveMaskRoughnessScale);
+
+		float ReflectionContribution = 0.f;
 		if ( Reflection.w > 0.f && ReactiveMaskReflectionScale > 0.f )
 		{
 			Output.w = Luminance(Reflection.xyz) * ReactiveMaskReflectionLumaBias;
-			Output.y = lerp((Reflection.w * ReactiveMaskReflectionScale), 1.f, Output.w);
-			Output.y += (max(Output.z - Output.y, 0.f) * ReactiveMaskRoughnessBias);
+			ReflectionContribution = lerp((Reflection.w * ReactiveMaskReflectionScale), 1.f, Output.w);
+			ReflectionContribution += (max(Output.z - ReflectionContribution, 0.f) * ReactiveMaskRoughnessBias);
 		}
 		else
 		{
-			Output.y = Output.z;
+			ReflectionContribution = Output.z;
 		}
-		Output.y = lerp(Output.y, 1.f, TranslucencyContribution.y);
+
+		Output.x = saturate(TranslucencyContribution.x + ReflectionContribution);
+		Output.y = lerp(0.f, 1.f, TranslucencyContribution.y);
 
 		CompositeMask[DispatchThreadId.xy] = Output.x;
 		ReactiveMask[DispatchThreadId.xy] = max(ForceReactive, Output.y);

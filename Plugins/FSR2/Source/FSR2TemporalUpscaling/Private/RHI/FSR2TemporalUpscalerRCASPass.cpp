@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,8 +32,8 @@ public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER_STRUCT_REF(FFSR2PassParameters, cbFSR2)
 		SHADER_PARAMETER_STRUCT_REF(FFSR2RCASParameters, cbRCAS)
+		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_input_exposure)
 		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_rcas_input)
-		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_exposure)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D, rw_upscaled_output)
 	END_SHADER_PARAMETER_STRUCT()
 
@@ -55,12 +55,17 @@ public:
 	}
 	static uint32* GetBoundSRVs()
 	{
-		static uint32 SRVs[] = { FFX_FSR2_RESOURCE_IDENTIFIER_RCAS_INPUT, FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_EXPOSURE };
+		static uint32 SRVs[] = {
+			FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_EXPOSURE,
+			FFX_FSR2_RESOURCE_IDENTIFIER_RCAS_INPUT
+		};
 		return SRVs;
 	}
 	static uint32* GetBoundUAVs()
 	{
-		static uint32 UAVs[] = { FFX_FSR2_RESOURCE_IDENTIFIER_UPSCALED_OUTPUT };
+		static uint32 UAVs[] = {
+			FFX_FSR2_RESOURCE_IDENTIFIER_UPSCALED_OUTPUT
+		};
 		return UAVs;
 	}
 	static uint32 GetNumBoundSRVs()
@@ -77,12 +82,18 @@ public:
 	}
 	static uint32* GetBoundCBs()
 	{
-		static uint32 CBs[] = { FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_FSR2, FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_RCAS };
+		static uint32 CBs[] = {
+			FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_FSR2,
+			FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_RCAS
+		};
 		return CBs;
 	}
 	static uint32 GetConstantSizeInDWords(uint32 Index)
 	{
-		static uint32 Sizes[] = { sizeof(FFSR2PassParameters) / sizeof(uint32), sizeof(FFSR2RCASParameters) / sizeof(uint32) };
+		static uint32 Sizes[] = {
+			sizeof(FFSR2PassParameters) / sizeof(uint32),
+			sizeof(FFSR2RCASParameters) / sizeof(uint32)
+		};
 		return Sizes[Index];
 	}
 	static void BindParameters(FRDGBuilder& GraphBuilder, FFSR2BackendState* Context, const FfxGpuJobDescription* job, FParameters* Parameters)
@@ -93,19 +104,18 @@ public:
 			{
 				case FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_FSR2:
 				{
-					FFSR2PassParameters PassParams;
-					FMemory::Memcpy(&PassParams, job->computeJobDescriptor.cbs[i].data, sizeof(FFSR2PassParameters));
-					Parameters->cbFSR2 = TUniformBufferRef<FFSR2PassParameters>::CreateUniformBufferImmediate(PassParams, UniformBuffer_SingleDraw);
+					FFSR2PassParameters Buffer;
+					FMemory::Memcpy(&Buffer, job->computeJobDescriptor.cbs[i].data, sizeof(FFSR2PassParameters));
+					Parameters->cbFSR2 = TUniformBufferRef<FFSR2PassParameters>::CreateUniformBufferImmediate(Buffer, UniformBuffer_SingleDraw);
 					break;
 				}
 				case FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_RCAS:
 				{
-					FFSR2RCASParameters Offsets;
-					FMemory::Memcpy(&Offsets, job->computeJobDescriptor.cbs[1].data, sizeof(FFSR2RCASParameters));
-					Parameters->cbRCAS = TUniformBufferRef<FFSR2RCASParameters>::CreateUniformBufferImmediate(Offsets, UniformBuffer_SingleDraw);
+					FFSR2RCASParameters Buffer;
+					FMemory::Memcpy(&Buffer, job->computeJobDescriptor.cbs[1].data, sizeof(FFSR2RCASParameters));
+					Parameters->cbRCAS = TUniformBufferRef<FFSR2RCASParameters>::CreateUniformBufferImmediate(Buffer, UniformBuffer_SingleDraw);
 					break;
 				}
-				case FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_SPD:
 				default:
 				{
 					break;
@@ -117,14 +127,14 @@ public:
 		{
 			switch (job->computeJobDescriptor.pipeline.srvResourceBindings[i].resourceIdentifier)
 			{
+				case FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_EXPOSURE:
+				{
+					Parameters->r_input_exposure = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
+					break;
+				}
 				case FFX_FSR2_RESOURCE_IDENTIFIER_RCAS_INPUT:
 				{
 					Parameters->r_rcas_input = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
-					break;
-				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_EXPOSURE:
-				{
-					Parameters->r_exposure = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
 					break;
 				}
 				default:

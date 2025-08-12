@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -117,7 +117,6 @@ public:
 //-------------------------------------------------------------------------------------
 // These functions instantiate the actual passes.
 //-------------------------------------------------------------------------------------
-extern IFSR2SubPass* GetPrepareInputColorPass(FfxFsr2Pass passId, const FfxPipelineDescription* desc, FfxPipelineState* outPipeline, bool bSupportHalf);
 extern IFSR2SubPass* GetDepthClipPass(FfxFsr2Pass passId, const FfxPipelineDescription* desc, FfxPipelineState* outPipeline, bool bSupportHalf);
 extern IFSR2SubPass* GetReconstructPreviousDepthPass(FfxFsr2Pass passId, const FfxPipelineDescription* desc, FfxPipelineState* outPipeline, bool bSupportHalf);
 extern IFSR2SubPass* GetLockPass(FfxFsr2Pass passId, const FfxPipelineDescription* desc, FfxPipelineState* outPipeline, bool bSupportHalf);
@@ -125,3 +124,4 @@ extern IFSR2SubPass* GetAccumulatePass(FfxFsr2Pass passId, const FfxPipelineDesc
 extern IFSR2SubPass* GetRCASPass(FfxFsr2Pass passId, const FfxPipelineDescription* desc, FfxPipelineState* outPipeline, bool bSupportHalf);
 extern IFSR2SubPass* GetComputeLuminancePyramidPass(FfxFsr2Pass passId, const FfxPipelineDescription* desc, FfxPipelineState* outPipeline, bool bSupportHalf);
 extern IFSR2SubPass* GetAutogenReactiveMaskPass(FfxFsr2Pass passId, const FfxPipelineDescription* desc, FfxPipelineState* outPipeline, bool bSupportHalf);
+extern IFSR2SubPass* GetTcrAutogeneratePass(FfxFsr2Pass passId, const FfxPipelineDescription* desc, FfxPipelineState* outPipeline, bool bSupportHalf);

@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,10 +21,11 @@
 #pragma once
 
 #include "Modules/ModuleManager.h"
+#include "FSR2ScreenPercentageData.h"
+#include "RHIDefinitions.h"
 
 class FFSR2TemporalUpscaler;
 class ICustomStaticScreenPercentage;
-class ITemporalUpscaler;
 
 //-------------------------------------------------------------------------------------
 // In order for the FSR2 plugin to support the movie render pipeline some functions have to be exposed.
@@ -34,7 +35,7 @@ class IFSR2TemporalUpscalingModule : public IModuleInterface
 {
 public:
 	virtual FFSR2TemporalUpscaler* GetFSR2Upscaler() const = 0;
-	virtual ITemporalUpscaler* GetTemporalUpscaler() const = 0;
+	virtual FFSR2TemporalUpscaler* GetTemporalUpscaler() const = 0;
 	virtual ICustomStaticScreenPercentage* GetCustomStaticScreenPercentage() const = 0;
 	virtual float GetResolutionFraction(uint32 Mode) const = 0;
 	virtual bool IsPlatformSupported(EShaderPlatform Platform) const = 0;
@@ -51,7 +52,7 @@ public:
 	void SetTemporalUpscaler(TSharedPtr<FFSR2TemporalUpscaler, ESPMode::ThreadSafe> Upscaler);
 
 	FFSR2TemporalUpscaler* GetFSR2Upscaler() const;
-	ITemporalUpscaler* GetTemporalUpscaler() const;
+	FFSR2TemporalUpscaler* GetTemporalUpscaler() const;
 	ICustomStaticScreenPercentage* GetCustomStaticScreenPercentage() const;
 	float GetResolutionFraction(uint32 Mode) const;
 	bool IsPlatformSupported(EShaderPlatform Platform) const;

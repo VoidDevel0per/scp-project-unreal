@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,7 @@ void MainCS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_Group
 			float2 ViewportUV = (DispatchThreadId.xy + 0.5) * View.ViewSizeAndInvSize.zw;
 			float2 ScreenPos = ViewportUVToScreenPos(ViewportUV);
 
-			Velocity = ComputeStaticVelocity(ScreenPos, Depth);
+			Velocity = ComputeStaticVelocity(ScreenPos, Depth).xy;
 		}
 
 		// FSR2 expects negative velocity from what UE4 produces.  FSR2 also wants the absolute result multiplied by (0.5, -0.5).  Combine these steps by multiplying by (-0.5, 0.5).

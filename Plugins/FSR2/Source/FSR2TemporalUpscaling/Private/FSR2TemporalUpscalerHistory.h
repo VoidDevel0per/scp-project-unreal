@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,8 @@
 #include "CoreMinimal.h"
 #include "SceneRendering.h"
 #include "FSR2Include.h"
+
+using IFSR2CustomTemporalAAHistory = ICustomTemporalAAHistory;
 
 class FFSR2TemporalUpscaler;
 
@@ -71,13 +73,14 @@ struct FFSR2State : public FRHIResource
 	FfxFsr2ContextDescription Params;
 	FfxFsr2Context Fsr2;
 	uint64 LastUsedFrame;
+	uint32 ViewID;
 };
 typedef TRefCountPtr<FFSR2State> FSR2StateRef;
 
 //-------------------------------------------------------------------------------------
 // The ICustomTemporalAAHistory for FSR2, this retains the FSR2 state object.
 //-------------------------------------------------------------------------------------
-class FFSR2TemporalUpscalerHistory final : public ICustomTemporalAAHistory, public FRefCountBase
+class FFSR2TemporalUpscalerHistory final : public IFSR2CustomTemporalAAHistory, public FRefCountBase
 {
 public:
 	FFSR2TemporalUpscalerHistory(FSR2StateRef NewState, FFSR2TemporalUpscaler* Upscaler);
