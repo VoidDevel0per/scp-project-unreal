@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -355,6 +355,7 @@ void FFSR2ViewExtension::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
 		IFSR2TemporalUpscalingModule& FSR2ModuleInterface = FModuleManager::GetModuleChecked<IFSR2TemporalUpscalingModule>(TEXT("FSR2TemporalUpscaling"));
 		FFSR2TemporalUpscaler* Upscaler = FSR2ModuleInterface.GetFSR2Upscaler();
 		bool IsTemporalUpscalingRequested = false;
+		bool bIsGameView = !WITH_EDITOR;
 		for (int i = 0; i < InViewFamily.Views.Num(); i++)
 		{
 			const FSceneView* InView = InViewFamily.Views[i];
@@ -365,6 +366,8 @@ void FFSR2ViewExtension::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
 					FGlobalShaderMap* GlobalMap = GetGlobalShaderMap(InViewFamily.GetFeatureLevel());
 					Upscaler->SetSSRShader(GlobalMap);
 				}
+
+				bIsGameView |= InView->bIsGameView;
 
 				// Don't run FSR2 if Temporal Upscaling is unused.
 				IsTemporalUpscalingRequested |= (InView->PrimaryScreenPercentageMethod == EPrimaryScreenPercentageMethod::TemporalUpscale);
@@ -398,6 +401,7 @@ void FFSR2ViewExtension::PreRenderViewFamily_RenderThread(FRHICommandListImmedia
 				{
 					FViewInfo* View = (FViewInfo*)SceneView;
 					View->PrevViewInfo.CustomTemporalAAHistory.SafeRelease();
+
 					if (!View->bStatePrevViewInfoIsReadOnly && View->ViewState)
 					{
 						View->ViewState->PrevFrameViewInfo.CustomTemporalAAHistory.SafeRelease();

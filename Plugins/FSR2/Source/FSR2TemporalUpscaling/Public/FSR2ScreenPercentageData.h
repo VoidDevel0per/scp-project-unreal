@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,12 +20,12 @@
 // THE SOFTWARE.
 #pragma once
 
-#include "CustomStaticScreenPercentage.h"
 #include "Runtime/Launch/Resources/Version.h"
+#include "CustomStaticScreenPercentage.h"
+#if WITH_EDITOR
+#include "CustomEditorStaticScreenPercentage.h"
+#endif
 
-#define FSR2_ENGINE_SUPPORTS_SCREENPERCENTAGEDATA ((ENGINE_MAJOR_VERSION == 4) && (ENGINE_MINOR_VERSION >= 27))
-
-#if FSR2_ENGINE_SUPPORTS_SCREENPERCENTAGEDATA
 //-------------------------------------------------------------------------------------
 // Used for the Editor viewport, where the user can select the FSR2 quality if it is enabled.
 //-------------------------------------------------------------------------------------
@@ -34,4 +34,3 @@ class FFSR2CustomStaticScreenPercentageData final : public ICustomStaticScreenPe
 public:
 	int32 QualityMode = 0;
 };
-#endif

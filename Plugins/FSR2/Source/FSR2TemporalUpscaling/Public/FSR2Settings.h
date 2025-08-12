@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -74,7 +74,7 @@ enum class EFSR2LandscapeHISMMode : int32
 //-------------------------------------------------------------------------------------
 // Settings for FSR2 exposed through the Editor UI.
 //-------------------------------------------------------------------------------------
-UCLASS(Config = Engine, DefaultConfig, DisplayName = "FidelityFX Super Resolution 2.1")
+UCLASS(Config = Engine, DefaultConfig, DisplayName = "FidelityFX Super Resolution 2.2")
 class FSR2TEMPORALUPSCALING_API UFSR2Settings : public UDeveloperSettings
 {
 	GENERATED_UCLASS_BODY()
@@ -152,7 +152,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Reactive Mask Settings", meta = (ConsoleVariable = "r.FidelityFX.FSR2.ReactiveMaskTranslucencyBias", DisplayName = "Translucency Bias", ClampMin = 0, ClampMax = 1, ToolTip = "Scales how much contribution translucency makes to the reactive mask. Higher values will make translucent materials less reactive which can reduce smearing."))
 		float TranslucencyBias;
 
-	UPROPERTY(Config, EditAnywhere, Category = "Reactive Mask Settings", meta = (ConsoleVariable = "r.FidelityFX.FSR2.ReactiveMaskTranslucencyLumaBias", DisplayName = "Translucency Luminance Bias", ClampMin = 0, ClampMax = 1, ToolTip = "Biases the translucency contribution by the luminance of the transparency."))
+	UPROPERTY(Config, EditAnywhere, Category = "Reactive Mask Settings", meta = (ConsoleVariable = "r.FidelityFX.FSR2.ReactiveMaskTranslucencyLumaBias", DisplayName = "Translucency Luminance Bias", ClampMin = 0, ClampMax = 1, ToolTip = "Biases the translucency contribution to the reactive mask by the luminance of the transparency."))
 		float TranslucencyLuminanceBias;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Reactive Mask Settings", meta = (ConsoleVariable = "r.FidelityFX.FSR2.ReactiveMaskTranslucencyMaxDistance", DisplayName = "Translucency Max Distance", ClampMin = 0, ToolTip = "Maximum distance in world units for using translucency to contribute to the reactive mask. This is another way to remove sky-boxes and other back-planes from the reactive mask, at the expense of nearer translucency not being reactive."))
@@ -169,4 +169,10 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Reactive Mask Settings", meta = (ConsoleVariable = "r.FidelityFX.FSR2.ReactiveMaskForceReactiveMaterialValue", DisplayName = "Force value for Reactive Shading Model", ClampMin = 0, ClampMax = 1, ToolTip = "Force the reactive mask value for Reactive Shading Model materials, when > 0 this value can be used to override the value supplied in the Material Graph."))
 		float ForceReactiveMaterialValue;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reactive Mask Settings", meta = (ConsoleVariable = "r.FidelityFX.FSR2.ReactiveHistoryTranslucencyBias", DisplayName = "Translucency Bias", ClampMin = 0, ClampMax = 1, ToolTip = "Scales how much contribution translucency makes to suppress history via the reactive mask. Higher values will make translucent materials less reactive which can reduce smearing."))
+		float ReactiveHistoryTranslucencyBias;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reactive Mask Settings", meta = (ConsoleVariable = "r.FidelityFX.FSR2.ReactiveHistoryTranslucencyLumaBias", DisplayName = "Translucency Luminance Bias", ClampMin = 0, ClampMax = 1, ToolTip = "Biases the translucency contribution to suppress history via the reactive mask by the luminance of the transparency."))
+		float ReactiveHistoryTranslucencyLumaBias;
 };

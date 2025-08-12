@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 #else
 #define _countof(a) (sizeof(a)/sizeof(*(a)))
 #define strcpy_s(a, b) strcpy(a, b)
+#define wcscpy_s wcscpy
 #define FFX_GCC 1
 #endif
 THIRD_PARTY_INCLUDES_START
@@ -38,5 +39,6 @@ THIRD_PARTY_INCLUDES_END
 #else
 #undef _countof
 #undef strcpy_s
+#undef wcscpy_s
 #undef FFX_GCC
 #endif

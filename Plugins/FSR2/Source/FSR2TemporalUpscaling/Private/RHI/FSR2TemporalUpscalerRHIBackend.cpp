@@ -1,6 +1,6 @@
 // This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -398,11 +398,6 @@ static FfxErrorCode CreatePipeline_UE(FfxFsr2Interface* backendInterface, FfxFsr
 	{
 		switch (passId)
 		{
-			case FFX_FSR2_PASS_PREPARE_INPUT_COLOR:
-			{
-				outPipeline->pipeline = (FfxPipeline*)GetPrepareInputColorPass(passId, desc, outPipeline, deviceCapabilities.fp16Supported);
-				break;
-			}
 			case FFX_FSR2_PASS_DEPTH_CLIP:
 			{
 				outPipeline->pipeline = (FfxPipeline*)GetDepthClipPass(passId, desc, outPipeline, deviceCapabilities.fp16Supported);
@@ -437,6 +432,11 @@ static FfxErrorCode CreatePipeline_UE(FfxFsr2Interface* backendInterface, FfxFsr
 			case FFX_FSR2_PASS_GENERATE_REACTIVE:
 			{
 				outPipeline->pipeline = (FfxPipeline*)GetAutogenReactiveMaskPass(passId, desc, outPipeline, deviceCapabilities.fp16Supported);
+				break;
+			}
+			case FFX_FSR2_PASS_TCR_AUTOGENERATE:
+			{
+				outPipeline->pipeline = (FfxPipeline*)GetTcrAutogeneratePass(passId, desc, outPipeline, deviceCapabilities.fp16Supported);
 				break;
 			}
 			default:

@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 IMPLEMENT_UNIFORM_BUFFER_STRUCT(FFSR2PassParameters, "cbFSR2");
 IMPLEMENT_UNIFORM_BUFFER_STRUCT(FFSR2ComputeLuminanceParameters, "cbSPD");
 IMPLEMENT_UNIFORM_BUFFER_STRUCT(FFSR2RCASParameters, "cbRCAS");
+IMPLEMENT_UNIFORM_BUFFER_STRUCT(FFSR2GenerateReactiveParameters, "cbGenerateReactive");
 
 bool FFSR2GlobalShader::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {

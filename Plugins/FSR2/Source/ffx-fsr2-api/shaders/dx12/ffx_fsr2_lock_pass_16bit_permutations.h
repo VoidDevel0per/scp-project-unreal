@@ -1,4 +1,5 @@
-#include "ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7.h"
+#include "ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01.h"
+#include "ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69.h"
 
 typedef union ffx_fsr2_lock_pass_16bit_PermutationKey {
     struct {
@@ -49,6 +50,22 @@ typedef struct ffx_fsr2_lock_pass_16bit_PermutationInfo {
 } ffx_fsr2_lock_pass_16bit_PermutationInfo;
 
 static const uint32_t g_ffx_fsr2_lock_pass_16bit_IndirectionTable[] = {
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
     0,
     0,
     0,
@@ -65,38 +82,22 @@ static const uint32_t g_ffx_fsr2_lock_pass_16bit_IndirectionTable[] = {
     0,
     0,
     0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
     0,
     0,
     0,
@@ -116,6 +117,7 @@ static const uint32_t g_ffx_fsr2_lock_pass_16bit_IndirectionTable[] = {
 };
 
 static const ffx_fsr2_lock_pass_16bit_PermutationInfo g_ffx_fsr2_lock_pass_16bit_PermutationInfo[] = {
-    { g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_size, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_data, 1, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_CBVResourceNames, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_CBVResourceBindings, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_CBVResourceCounts, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_CBVResourceSpaces, 2, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_SRVResourceNames, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_SRVResourceBindings, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_SRVResourceCounts, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_SRVResourceSpaces, 1, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_UAVResourceNames, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_UAVResourceBindings, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_UAVResourceCounts, g_ffx_fsr2_lock_pass_16bit_064c0ce1172a7e8e4f054746bf6f68e7_UAVResourceSpaces, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+    { g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_size, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_data, 1, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_CBVResourceNames, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_CBVResourceBindings, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_CBVResourceCounts, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_CBVResourceSpaces, 1, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_SRVResourceNames, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_SRVResourceBindings, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_SRVResourceCounts, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_SRVResourceSpaces, 2, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_UAVResourceNames, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_UAVResourceBindings, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_UAVResourceCounts, g_ffx_fsr2_lock_pass_16bit_44878b75b70edc2855edcfe71012aa01_UAVResourceSpaces, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+    { g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_size, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_data, 1, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_CBVResourceNames, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_CBVResourceBindings, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_CBVResourceCounts, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_CBVResourceSpaces, 1, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_SRVResourceNames, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_SRVResourceBindings, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_SRVResourceCounts, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_SRVResourceSpaces, 2, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_UAVResourceNames, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_UAVResourceBindings, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_UAVResourceCounts, g_ffx_fsr2_lock_pass_16bit_7cca69e4d7a6857b8ace04058f8dfe69_UAVResourceSpaces, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
 };
 

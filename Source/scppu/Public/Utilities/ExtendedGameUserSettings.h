@@ -10,10 +10,10 @@ UENUM(BlueprintType)
 enum class EUpscalerType : uint8
 {
 	None = 0 UMETA(DisplayName = "None"),
-	//TAAU = 1 UMETA(DisplayName = "TAAU"),
-	FSR1 = 2 UMETA(DisplayName = "FSR 1"),
-	FSR2 = 3 UMETA(DisplayName = "FSR 2"),
-	DLSS3 = 4 UMETA(DisplayName = "DLSS 3.5")
+	FSR1 = 1 UMETA(DisplayName = "FSR 1"),
+	FSR2 = 2 UMETA(DisplayName = "FSR 2.2"),
+	//DLSS3 = 3 UMETA(DisplayName = "DLSS 3.5"),
+	//TAAU = 4 UMETA(DisplayName = "TAAU")
 };
 
 UENUM(BlueprintType)
@@ -44,6 +44,10 @@ protected:
 	// Gamma level to use. Higher value = more brightness
 	UPROPERTY(config)
 		float ScreenGammaLevel = 2.2f;
+
+	// If true, Volumetric Fog will be used
+	UPROPERTY(config)
+	bool bUseVolumetric = true;
 
 	// If true, texture streaming will be used
 	UPROPERTY(config)
@@ -101,6 +105,14 @@ public:
 	// Returns the user setting for screen gamma as a 0.5f..5.0f value
 	UFUNCTION(BlueprintCallable, Category = Settings)
 		float GetScreenGamma() const;
+
+	// Returns the user setting for volumetric fog
+	UFUNCTION(BlueprintCallable, Category = Settings)
+	bool IsVolumetricFogEnabled() const;
+
+	// Sets the user setting for Volumetric Fog
+	UFUNCTION(BlueprintCallable, Category = Settings)
+	void SetVolumetricFogEnabled(bool bEnabled);
 
 	// Sets the user setting for texture streaming
 	UFUNCTION(BlueprintCallable, Category = Settings)

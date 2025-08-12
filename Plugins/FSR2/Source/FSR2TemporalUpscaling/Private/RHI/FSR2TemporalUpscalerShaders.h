@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -44,27 +44,25 @@ typedef FVector4 FVector4f;
 //-------------------------------------------------------------------------------------
 BEGIN_UNIFORM_BUFFER_STRUCT(FFSR2PassParameters, )
 	SHADER_PARAMETER(FIntPoint, iRenderSize)
+	SHADER_PARAMETER(FIntPoint, iMaxRenderSize)
 	SHADER_PARAMETER(FIntPoint, iDisplaySize)
-	SHADER_PARAMETER(FIntPoint, uLumaMipDimensions)
-	SHADER_PARAMETER(uint32, uLumaMipLevelToUse)
-	SHADER_PARAMETER(uint32, uFrameIndex)
-	SHADER_PARAMETER(FVector2f, fDisplaySizeRcp)
-	SHADER_PARAMETER(FVector2f, fJitter)
+	SHADER_PARAMETER(FIntPoint, iInputColorResourceDimensions)
+	SHADER_PARAMETER(FIntPoint, iLumaMipDimensions)
+	SHADER_PARAMETER(int, iLumaMipLevelToUse)
+	SHADER_PARAMETER(int, iFrameIndex)
+
 	SHADER_PARAMETER(FVector4f, fDeviceToViewDepth)
-	SHADER_PARAMETER(FVector2f, depthclip_uv_scale)
-	SHADER_PARAMETER(FVector2f, postprocessed_lockstatus_uv_scale)
-	SHADER_PARAMETER(FVector2f, reactive_mask_dim_rcp)
-	SHADER_PARAMETER(FVector2f, MotionVectorScale)
+	SHADER_PARAMETER(FVector2f, fJitter)
+	SHADER_PARAMETER(FVector2f, fMotionVectorScale)
 	SHADER_PARAMETER(FVector2f, fDownscaleFactor)
-	SHADER_PARAMETER(float, fPreExposure)
-	SHADER_PARAMETER(float, fTanHalfFOV)
 	SHADER_PARAMETER(FVector2f, fMotionVectorJitterCancellation)
+	SHADER_PARAMETER(float, fPreExposure)
+	SHADER_PARAMETER(float, fPreviousFramePreExposure)
+	SHADER_PARAMETER(float, fTanHalfFOV)
 	SHADER_PARAMETER(float, fJitterSequenceLength)
-	SHADER_PARAMETER(float, fLockInitialLifetime)
-	SHADER_PARAMETER(float, fLockTickDelta)
 	SHADER_PARAMETER(float, fDeltaTime)
 	SHADER_PARAMETER(float, fDynamicResChangeFactor)
-	SHADER_PARAMETER(float, fLumaMipRcp)
+	SHADER_PARAMETER(float, fViewSpaceToMetersFactor)
 END_UNIFORM_BUFFER_STRUCT()
 
 //-------------------------------------------------------------------------------------
@@ -75,7 +73,6 @@ BEGIN_UNIFORM_BUFFER_STRUCT(FFSR2ComputeLuminanceParameters, )
 	SHADER_PARAMETER(uint32, numWorkGroups)
 	SHADER_PARAMETER(FIntPoint, workGroupOffset)
 	SHADER_PARAMETER(FIntPoint, renderSize)
-	SHADER_PARAMETER(FIntPoint, pad1)
 END_UNIFORM_BUFFER_STRUCT()
 
 //-------------------------------------------------------------------------------------
@@ -83,6 +80,16 @@ END_UNIFORM_BUFFER_STRUCT()
 //-------------------------------------------------------------------------------------
 BEGIN_UNIFORM_BUFFER_STRUCT(FFSR2RCASParameters, )
 	SHADER_PARAMETER(FUintVector4, rcasConfig)
+END_UNIFORM_BUFFER_STRUCT()
+
+//-------------------------------------------------------------------------------------
+// Paramters for the TCR Autogenerate pass.
+//-------------------------------------------------------------------------------------
+BEGIN_UNIFORM_BUFFER_STRUCT(FFSR2GenerateReactiveParameters, )
+	SHADER_PARAMETER(float, fTcThreshold)
+	SHADER_PARAMETER(float, fTcScale)
+	SHADER_PARAMETER(float, fReactiveScale)
+	SHADER_PARAMETER(float, fReactiveMax)
 END_UNIFORM_BUFFER_STRUCT()
 
 //-------------------------------------------------------------------------------------
