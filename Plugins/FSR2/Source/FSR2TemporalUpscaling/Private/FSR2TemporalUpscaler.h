@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,11 +24,13 @@
 #include "PostProcess/PostProcessing.h"
 #include "PostProcess/PostProcessUpscale.h"
 #include "PostProcess/TemporalAA.h"
-#include "CustomStaticScreenPercentage.h"
 #include "ScreenSpaceDenoise.h"
 #include "Containers/LockFreeList.h"
 #include "FSR2TemporalUpscalerHistory.h"
 #include "FSR2ScreenPercentageData.h"
+
+using IFSR2TemporalUpscaler = ITemporalUpscaler;
+using FFSR2PassInputs = ITemporalUpscaler::FPassInputs;
 
 struct FPostProcessingInputs;
 
@@ -51,10 +53,11 @@ enum class EFSR2TemporalUpscalerAPI : uint8
 
 //-------------------------------------------------------------------------------------
 // The core upscaler implementation for FSR2.
-// Implements the ICustomStaticScreenPercentage to enforce FSR2's quality modes.
 // Implements IScreenSpaceDenoiser in order to access the reflection texture data.
 //-------------------------------------------------------------------------------------
-class FFSR2TemporalUpscaler final : public ITemporalUpscaler, public ICustomStaticScreenPercentage, public IScreenSpaceDenoiser
+// Implements the ICustomStaticScreenPercentage to enforce FSR2's quality modes.
+
+class FFSR2TemporalUpscaler final : public IFSR2TemporalUpscaler, public ICustomStaticScreenPercentage, public IScreenSpaceDenoiser
 {
 	friend class FFSR2FXSystem;
 public:
@@ -69,23 +72,24 @@ public:
 
 	static float GetResolutionFraction(uint32 Mode);
 
+#if DO_CHECK || DO_GUARD_SLOW || DO_ENSURE
+	static void OnFSR2Message(FfxFsr2MsgType type, const wchar_t* message);
+#endif // DO_CHECK || DO_GUARD_SLOW || DO_ENSURE
+
 	class FRDGBuilder* GetGraphBuilder();
 
 	void AddPasses(
 		FRDGBuilder& GraphBuilder,
 		const FViewInfo& View,
-		const ITemporalUpscaler::FPassInputs& PassInputs,
+		const FPassInputs& PassInputs,
 		FRDGTextureRef* OutSceneColorTexture,
 		FIntRect* OutSceneColorViewRect,
 		FRDGTextureRef* OutSceneColorHalfResTexture,
 		FIntRect* OutSceneColorHalfResViewRect) const override;
 
 	void SetupMainGameViewFamily(FSceneViewFamily& InViewFamily) override;
-
-#if FSR2_ENGINE_SUPPORTS_SCREENPERCENTAGEDATA
 	// Support ICustomStaticScreenPercentage for non-game view families (like MovieRenderQueue)
 	void SetupViewFamily(FSceneViewFamily& ViewFamily, TSharedPtr<ICustomStaticScreenPercentageData> ScreenPercentageDataInterface) override;
-#endif
 
 	float GetMinUpsampleResolutionFraction() const override;
 	float GetMaxUpsampleResolutionFraction() const override;
@@ -207,7 +211,7 @@ private:
 	mutable FRDGTextureRef ReflectionTexture;
 	mutable FTexture2DRHIRef SceneColorPreAlpha;
 	mutable TRefCountPtr<IPooledRenderTarget> SceneColorPreAlphaRT;
-	TMap<class FGlobalShaderMap*, struct FFSR2ShaderMap*> SSRShaderMaps;
+
 #if WITH_EDITOR
 	bool bEnabledInEditor;
 #endif

@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +33,12 @@ public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER_STRUCT_REF(FFSR2PassParameters, cbFSR2)
 		SHADER_PARAMETER_STRUCT_REF(FFSR2ComputeLuminanceParameters, cbSPD)
+		SHADER_PARAMETER_SAMPLER(SamplerState, s_LinearClamp)
 		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_input_color_jittered)
-		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D, rw_exposure)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D, rw_spd_global_atomic)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D, rw_img_mip_shading_change)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D, rw_img_mip_5)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D, rw_auto_exposure)
 	END_SHADER_PARAMETER_STRUCT()
 
 	using FPermutationDomain = FFSR2GlobalShader::FPermutationDomain;
@@ -49,23 +50,34 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		FFSR2GlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+
 		bool const bWaveOps = FDataDrivenShaderPlatformInfo::GetSupportsWaveOperations(Parameters.Platform);
 		if (!bWaveOps)
 		{
 			OutEnvironment.SetDefine(TEXT("SPD_NO_WAVE_OPERATIONS"), TEXT("1"));
+		}
+		else
+		{
+			OutEnvironment.CompilerFlags.Add(CFLAG_WaveOperations);
 		}
 		OutEnvironment.CompilerFlags.Add(CFLAG_PreferFlowControl);
 		OutEnvironment.SetDefine(TEXT("FFX_SHADER_MODEL_5"), TEXT("1"));
 	}
 	static uint32* GetBoundSRVs()
 	{
-		static uint32 SRVs[] = { FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_COLOR };
+		static uint32 SRVs[] = {
+			FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_COLOR
+		};
 		return SRVs;
 	}
 	static uint32* GetBoundUAVs()
 	{
-		static uint32 UAVs[] = { FFX_FSR2_RESOURCE_IDENTIFIER_EXPOSURE, FFX_FSR2_RESOURCE_IDENTIFIER_SPD_ATOMIC_COUNT,
-		FFX_FSR2_RESOURCE_IDENTIFIER_AUTO_EXPOSURE_MIPMAP_SHADING_CHANGE, FFX_FSR2_RESOURCE_IDENTIFIER_AUTO_EXPOSURE_MIPMAP_5 };
+		static uint32 UAVs[] = {
+			FFX_FSR2_RESOURCE_IDENTIFIER_SPD_ATOMIC_COUNT,
+			FFX_FSR2_RESOURCE_IDENTIFIER_SCENE_LUMINANCE_MIPMAP_SHADING_CHANGE,
+			FFX_FSR2_RESOURCE_IDENTIFIER_SCENE_LUMINANCE_MIPMAP_5,
+			FFX_FSR2_RESOURCE_IDENTIFIER_AUTO_EXPOSURE
+		};
 		return UAVs;
 	}
 	static uint32 GetNumBoundSRVs()
@@ -98,19 +110,18 @@ public:
 			{
 				case FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_FSR2:
 				{
-					FFSR2PassParameters PassParams;
-					FMemory::Memcpy(&PassParams, job->computeJobDescriptor.cbs[i].data, sizeof(FFSR2PassParameters));
-					Parameters->cbFSR2 = TUniformBufferRef<FFSR2PassParameters>::CreateUniformBufferImmediate(PassParams, UniformBuffer_SingleDraw);
+					FFSR2PassParameters Buffer;
+					FMemory::Memcpy(&Buffer, job->computeJobDescriptor.cbs[i].data, sizeof(FFSR2PassParameters));
+					Parameters->cbFSR2 = TUniformBufferRef<FFSR2PassParameters>::CreateUniformBufferImmediate(Buffer, UniformBuffer_SingleDraw);
 					break;
 				}
 				case FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_SPD:
 				{
-					FFSR2ComputeLuminanceParameters Offsets;
-					FMemory::Memcpy(&Offsets, job->computeJobDescriptor.cbs[1].data, sizeof(FFSR2ComputeLuminanceParameters));
-					Parameters->cbSPD = TUniformBufferRef<FFSR2ComputeLuminanceParameters>::CreateUniformBufferImmediate(Offsets, UniformBuffer_SingleDraw);
+					FFSR2ComputeLuminanceParameters Buffer;
+					FMemory::Memcpy(&Buffer, job->computeJobDescriptor.cbs[1].data, sizeof(FFSR2ComputeLuminanceParameters));
+					Parameters->cbSPD = TUniformBufferRef<FFSR2ComputeLuminanceParameters>::CreateUniformBufferImmediate(Buffer, UniformBuffer_SingleDraw);
 					break;
 				}
-				case FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_RCAS:
 				default:
 				{
 					break;
@@ -139,17 +150,12 @@ public:
 		{
 			switch (BoundUAVs[i])
 			{
-				case FFX_FSR2_RESOURCE_IDENTIFIER_EXPOSURE:
-				{
-					Parameters->rw_exposure = GraphBuilder.CreateUAV(Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.uavs[i].internalIndex));
-					break;
-				}
 				case FFX_FSR2_RESOURCE_IDENTIFIER_SPD_ATOMIC_COUNT:
 				{
 					Parameters->rw_spd_global_atomic = GraphBuilder.CreateUAV(Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.uavs[i].internalIndex));
 					break;
 				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_AUTO_EXPOSURE_MIPMAP_SHADING_CHANGE:
+				case FFX_FSR2_RESOURCE_IDENTIFIER_SCENE_LUMINANCE_MIPMAP_SHADING_CHANGE:
 				{
 					FRDGTextureUAVDesc UavDesc;
 					UavDesc.Texture = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.uavs[i].internalIndex);
@@ -157,12 +163,17 @@ public:
 					Parameters->rw_img_mip_shading_change = GraphBuilder.CreateUAV(UavDesc);
 					break;
 				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_AUTO_EXPOSURE_MIPMAP_5:
+				case FFX_FSR2_RESOURCE_IDENTIFIER_SCENE_LUMINANCE_MIPMAP_5:
 				{
 					FRDGTextureUAVDesc UavDesc;
 					UavDesc.Texture = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.uavs[i].internalIndex);
 					UavDesc.MipLevel = job->computeJobDescriptor.uavMip[i];
 					Parameters->rw_img_mip_5 = GraphBuilder.CreateUAV(UavDesc);
+				}
+				case FFX_FSR2_RESOURCE_IDENTIFIER_AUTO_EXPOSURE:
+				{
+					Parameters->rw_auto_exposure = GraphBuilder.CreateUAV(Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.uavs[i].internalIndex));
+					break;
 				}
 				default:
 				{
@@ -170,6 +181,8 @@ public:
 				}
 			}
 		}
+
+		Parameters->s_LinearClamp = TStaticSamplerState<SF_Bilinear>::GetRHI();
 	}
 };
 IMPLEMENT_GLOBAL_SHADER(FFSR2ComputeLuminancePyramidCS, "/Plugin/FSR2/Private/ffx_fsr2_compute_luminance_pyramid_pass.usf", "CS", SF_Compute);

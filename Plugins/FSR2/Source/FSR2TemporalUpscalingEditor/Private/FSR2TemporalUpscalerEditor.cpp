@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,7 @@
 #include "FSR2TemporalUpscalerEditor.h"
 #include "FSR2TemporalUpscaling.h"
 #include "LegacyScreenPercentageDriver.h"
+#include "FSR2ScreenPercentageData.h"
 
 #include "Editor.h"
 #include "SLevelViewportToolBar.h"
@@ -73,8 +74,9 @@ void FFSR2TemporalUpscalerEditor::SetupEditorViewFamily(FSceneViewFamily& ViewFa
 	static const auto CVarFSR2Enabled = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.FidelityFX.FSR2.Enabled"));
 	static const auto CVarFSR2EnabledInEditor = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.FidelityFX.FSR2.EnabledInEditorViewport"));
 	static const auto CVarFSR2Quality = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.FidelityFX.FSR2.QualityMode"));
-	
-	ITemporalUpscaler const* Upscaler = TemporalUpscalingModule->GetTemporalUpscaler();
+
+	ITemporalUpscaler* Upscaler = (ITemporalUpscaler*)TemporalUpscalingModule->GetTemporalUpscaler();
+
 	bool bEnabledInEditor = false;
 	if (CVarFSR2Enabled && CVarFSR2Enabled->GetValueOnAnyThread() && CVarFSR2Quality && Upscaler && ViewFamily.GetTemporalUpscalerInterface() == nullptr)
 	{
@@ -116,7 +118,7 @@ static void MakeFSR2SettingsMenu(UToolMenu* Menu, FFSR2TemporalUpscalerEditor* U
 	Section.AddMenuEntry(
 		"FSR2Enabled",
 		LOCTEXT("FSR2EnabledOption", "Enabled"),
-		LOCTEXT("FSR2EnabledToolTip", "Use FidelityFX Super Resolution 2.1 to upscale."),
+		LOCTEXT("FSR2EnabledToolTip", "Use FidelityFX Super Resolution 2.2 to upscale."),
 		FSlateIcon(),
 		FUIAction(
 			FExecuteAction::CreateLambda([Arguments]() {
@@ -192,13 +194,13 @@ bool FFSR2TemporalUpscalerEditor::GenerateEditorViewportOptionsMenuEntry(const I
 	static const auto CVarFSR2Enabled = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.FidelityFX.FSR2.Enabled"));
 	FLevelEditorViewportClient& Viewport = Arguments.Viewport->GetLevelViewportClient();
 
-	ITemporalUpscaler* Upscaler = TemporalUpscalingModule->GetTemporalUpscaler();
+	ITemporalUpscaler* Upscaler = (ITemporalUpscaler*)TemporalUpscalingModule->GetTemporalUpscaler();
 	if (CVarFSR2Enabled && CVarFSR2Enabled->GetValueOnAnyThread() && Upscaler && Viewport.EngineShowFlags.Lighting && Viewport.IsPerspective())
 	{
 		Arguments.Section->AddSubMenu(
 			"FSR2Settings",
-			LOCTEXT("FSR2SettingsSubMenu", "FidelityFX Super Resolution 2.1"),
-			LOCTEXT("FSR2SettingsSubMenu_ToolTip", "Settings for FidelityFX Super Resolution 2.1 in the Editor viewport."),
+			LOCTEXT("FSR2SettingsSubMenu", "FidelityFX Super Resolution 2.2"),
+			LOCTEXT("FSR2SettingsSubMenu_ToolTip", "Settings for FidelityFX Super Resolution 2.2 in the Editor viewport."),
 			FNewToolMenuDelegate::CreateStatic(&MakeFSR2SettingsMenu, this, Arguments));
 	}
 	return false;
