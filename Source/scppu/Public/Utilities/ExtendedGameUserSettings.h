@@ -11,19 +11,18 @@ enum class EUpscalerType : uint8
 {
 	None = 0 UMETA(DisplayName = "None"),
 	FSR1 = 1 UMETA(DisplayName = "FSR 1"),
-	FSR2 = 2 UMETA(DisplayName = "FSR 2"),
-	DLSS3 = 3 UMETA(DisplayName = "DLSS 3.5"),
+	FSR2 = 2 UMETA(DisplayName = "FSR 2.2"),
+	//DLSS3 = 3 UMETA(DisplayName = "DLSS 3.5"),
 	//TAAU = 4 UMETA(DisplayName = "TAAU")
 };
 
 UENUM(BlueprintType)
 enum class EUpscalerQualityMode : uint8
 {
-	Native = 0 UMETA(DisplayName = "Native"),
-	Quality = 1 UMETA(DisplayName = "Quality"),
-	Balanced = 2 UMETA(DisplayName = "Balanced"),
-	Performance = 3 UMETA(DisplayName = "Performance"),
-	UltraPerformance = 4 UMETA(DisplayName = "Ultra Performance")
+	Quality = 0 UMETA(DisplayName = "Quality"),
+	Balanced = 1 UMETA(DisplayName = "Balanced"),
+	Performance = 2 UMETA(DisplayName = "Performance"),
+	UltraPerformance = 3 UMETA(DisplayName = "Ultra Performance")
 };
 
 UCLASS()
