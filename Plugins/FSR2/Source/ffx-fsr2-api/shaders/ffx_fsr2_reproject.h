@@ -1,6 +1,6 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
 #define FFX_FSR2_REPROJECT_H
 
 #ifndef FFX_FSR2_OPTION_REPROJECT_USE_LANCZOS_TYPE
-#define FFX_FSR2_OPTION_REPROJECT_USE_LANCZOS_TYPE 0 // Reference
+#define FFX_FSR2_OPTION_REPROJECT_USE_LANCZOS_TYPE 1 // Approximate
 #endif
 
 FfxFloat32x4 WrapHistory(FfxInt32x2 iPxSample)
@@ -49,16 +49,13 @@ DeclareCustomTextureSample(HistorySample, FFX_FSR2_GET_LANCZOS_SAMPLER1D(FFX_FSR
 
 FfxFloat32x4 WrapLockStatus(FfxInt32x2 iPxSample)
 {
-    FfxFloat32x4 fSample = FfxFloat32x4(LoadLockStatus(iPxSample), 0.0f, 0.0f);
-    return fSample;
+    return FfxFloat32x4(LoadLockStatus(iPxSample), 0.0f);
 }
 
 #if FFX_HALF
 FFX_MIN16_F4 WrapLockStatus(FFX_MIN16_I2 iPxSample)
 {
-    FFX_MIN16_F4 fSample = FFX_MIN16_F4(LoadLockStatus(iPxSample), 0.0, 0.0);
-
-    return fSample;
+    return FFX_MIN16_F4(LoadLockStatus(iPxSample), 0.0f);
 }
 #endif
 
@@ -91,46 +88,38 @@ FfxFloat32x2 GetMotionVector(FfxInt32x2 iPxHrPos, FfxFloat32x2 fHrUv)
     return fDilatedMotionVector;
 }
 
-FfxBoolean IsUvInside(FfxFloat32x2 fUv)
+void ComputeReprojectedUVs(FfxInt32x2 iPxHrPos, FfxFloat32x2 fMotionVector, FFX_PARAMETER_OUT FfxFloat32x2 fReprojectedHrUv, FFX_PARAMETER_OUT FfxBoolean bIsExistingSample)
 {
-    return (fUv.x >= 0.0f && fUv.x <= 1.0f) && (fUv.y >= 0.0f && fUv.y <= 1.0f);
+    FfxFloat32x2 fHrUv = (iPxHrPos + 0.5f) / DisplaySize();
+    fReprojectedHrUv = fHrUv + fMotionVector;
+
+    bIsExistingSample = (fReprojectedHrUv.x >= 0.0f && fReprojectedHrUv.x <= 1.0f) &&
+        (fReprojectedHrUv.y >= 0.0f && fReprojectedHrUv.y <= 1.0f);
 }
 
-void ComputeReprojectedUVs(const AccumulationPassCommonParams params, FFX_PARAMETER_OUT FfxFloat32x2 fReprojectedHrUv, FFX_PARAMETER_OUT FfxBoolean bIsExistingSample)
+void ReprojectHistoryColor(FfxInt32x2 iPxHrPos, FfxFloat32x2 fReprojectedHrUv, FFX_PARAMETER_OUT FfxFloat32x4 fHistoryColorAndWeight)
 {
-    fReprojectedHrUv = params.fHrUv + params.fMotionVector;
+    fHistoryColorAndWeight = HistorySample(fReprojectedHrUv, DisplaySize());
+    fHistoryColorAndWeight.rgb *= Exposure();
 
-    bIsExistingSample = IsUvInside(fReprojectedHrUv);
+#if FFX_FSR2_OPTION_HDR_COLOR_INPUT
+        fHistoryColorAndWeight.rgb = Tonemap(fHistoryColorAndWeight.rgb);
+#endif
+
+    fHistoryColorAndWeight.rgb = RGBToYCoCg(fHistoryColorAndWeight.rgb);
 }
 
-void ReprojectHistoryColor(const AccumulationPassCommonParams params, FFX_PARAMETER_OUT FfxFloat32x3 fHistoryColor, FFX_PARAMETER_OUT FfxFloat32 fTemporalReactiveFactor, FFX_PARAMETER_OUT FfxBoolean bInMotionLastFrame)
+void ReprojectHistoryLockStatus(FfxInt32x2 iPxHrPos, FfxFloat32x2 fReprojectedHrUv, FFX_PARAMETER_OUT FfxFloat32x3 fReprojectedLockStatus)
 {
-    FfxFloat32x4 fHistory = HistorySample(params.fReprojectedHrUv, DisplaySize());
+    // If function is called from Accumulate pass, we need to treat locks differently
+    FfxFloat32 fInPlaceLockLifetime = LoadRwLockStatus(iPxHrPos)[LOCK_LIFETIME_REMAINING];
 
-    fHistoryColor = PrepareRgb(fHistory.rgb, Exposure(), PreviousFramePreExposure());
+    fReprojectedLockStatus = SampleLockStatus(fReprojectedHrUv);
 
-    fHistoryColor = RGBToYCoCg(fHistoryColor);
-
-    //Compute temporal reactivity info
-    fTemporalReactiveFactor = ffxSaturate(abs(fHistory.w));
-    bInMotionLastFrame = (fHistory.w < 0.0f);
-}
-
-LockState ReprojectHistoryLockStatus(const AccumulationPassCommonParams params, FFX_PARAMETER_OUT FfxFloat32x2 fReprojectedLockStatus)
-{
-    LockState state = { FFX_FALSE, FFX_FALSE };
-    const FfxFloat32 fNewLockIntensity = LoadRwNewLocks(params.iPxHrPos);
-    state.NewLock = fNewLockIntensity > (127.0f / 255.0f);
-
-    FfxFloat32 fInPlaceLockLifetime = state.NewLock ? fNewLockIntensity : 0;
-
-    fReprojectedLockStatus = SampleLockStatus(params.fReprojectedHrUv);
-
-    if (fReprojectedLockStatus[LOCK_LIFETIME_REMAINING] != FfxFloat32(0.0f)) {
-        state.WasLockedPrevFrame = true;
+    // Keep lifetime if new lock
+    if (fInPlaceLockLifetime < 0.0f) {
+        fReprojectedLockStatus[LOCK_LIFETIME_REMAINING] = fInPlaceLockLifetime;
     }
-
-    return state;
 }
 
 #endif //!defined( FFX_FSR2_REPROJECT_H )

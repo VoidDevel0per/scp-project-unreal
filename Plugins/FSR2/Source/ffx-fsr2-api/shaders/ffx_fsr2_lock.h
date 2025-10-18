@@ -1,6 +1,6 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,17 @@
 #ifndef FFX_FSR2_LOCK_H
 #define FFX_FSR2_LOCK_H
 
-void ClearResourcesForNextFrame(in FfxInt32x2 iPxHrPos)
+FfxFloat32 GetLuma(FfxInt32x2 pos)
 {
-    if (all(FFX_LESS_THAN(iPxHrPos, FfxInt32x2(RenderSize()))))
-    {
-#if FFX_FSR2_OPTION_INVERTED_DEPTH
-        const FfxUInt32 farZ = 0x0;
-#else
-        const FfxUInt32 farZ = 0x3f800000;
-#endif
-        SetReconstructedDepth(iPxHrPos, farZ);
-    }
+    //add some bias to avoid locking dark areas
+    return FfxFloat32(LoadPreparedInputColorLuma(pos));
 }
 
-FfxBoolean ComputeThinFeatureConfidence(FfxInt32x2 pos)
+FfxFloat32 ComputeThinFeatureConfidence(FfxInt32x2 pos)
 {
     const FfxInt32 RADIUS = 1;
 
-    FfxFloat32 fNucleus = LoadLockInputLuma(pos);
+    FfxFloat32 fNucleus = GetLuma(pos);
 
     FfxFloat32 similar_threshold = 1.05f;
     FfxFloat32 dissimilarLumaMin = FSR2_FLT_MAX;
@@ -55,8 +48,7 @@ FfxBoolean ComputeThinFeatureConfidence(FfxInt32x2 pos)
 
     FfxUInt32 mask = SETBIT(4); //flag fNucleus as similar
 
-    const FfxUInt32 uNumRejectionMasks = 4;
-    const FfxUInt32 uRejectionMasks[uNumRejectionMasks] = {
+    const FfxUInt32 rejectionMasks[4] = {
         SETBIT(0) | SETBIT(1) | SETBIT(3) | SETBIT(4), //Upper left
         SETBIT(1) | SETBIT(2) | SETBIT(4) | SETBIT(5), //Upper right
         SETBIT(3) | SETBIT(4) | SETBIT(6) | SETBIT(7), //Lower left
@@ -72,7 +64,7 @@ FfxBoolean ComputeThinFeatureConfidence(FfxInt32x2 pos)
 
             FfxInt32x2 samplePos = ClampLoad(pos, FfxInt32x2(x, y), FfxInt32x2(RenderSize()));
 
-            FfxFloat32 sampleLuma = LoadLockInputLuma(samplePos);
+            FfxFloat32 sampleLuma = GetLuma(samplePos);
             FfxFloat32 difference = ffxMax(sampleLuma, fNucleus) / ffxMin(sampleLuma, fNucleus);
 
             if (difference > 0 && (difference < similar_threshold)) {
@@ -88,28 +80,47 @@ FfxBoolean ComputeThinFeatureConfidence(FfxInt32x2 pos)
 
     if (FFX_FALSE == isRidge) {
 
-        return false;
+        return 0;
     }
 
     FFX_UNROLL
     for (FfxInt32 i = 0; i < 4; i++) {
 
-        if ((mask & uRejectionMasks[i]) == uRejectionMasks[i]) {
-            return false;
+        if ((mask & rejectionMasks[i]) == rejectionMasks[i]) {
+            return 0;
         }
     }
     
-    return true;
+    return 1;
+}
+
+FFX_STATIC FfxBoolean s_bLockUpdated = FFX_FALSE;
+
+FfxFloat32x3 ComputeLockStatus(FfxInt32x2 iPxLrPos, FfxFloat32x3 fLockStatus)
+{
+    FfxFloat32 fConfidenceOfThinFeature = ComputeThinFeatureConfidence(iPxLrPos);
+
+    s_bLockUpdated = FFX_FALSE;
+    if (fConfidenceOfThinFeature > 0.0f)
+    {
+        //put to negative on new lock
+        fLockStatus[LOCK_LIFETIME_REMAINING] = (fLockStatus[LOCK_LIFETIME_REMAINING] == FfxFloat32(0.0f)) ? FfxFloat32(-LockInitialLifetime()) : FfxFloat32(-(LockInitialLifetime() * 2));
+
+        s_bLockUpdated = FFX_TRUE;
+    }
+
+    return fLockStatus;
 }
 
 void ComputeLock(FfxInt32x2 iPxLrPos)
 {
-    if (ComputeThinFeatureConfidence(iPxLrPos))
-    {
-        StoreNewLocks(ComputeHrPosFromLrPos(iPxLrPos), 1.f);
-    }
+    FfxInt32x2 iPxHrPos = ComputeHrPosFromLrPos(iPxLrPos);
 
-    ClearResourcesForNextFrame(iPxLrPos);
+    FfxFloat32x3 fLockStatus = ComputeLockStatus(iPxLrPos, LoadLockStatus(iPxHrPos));
+
+    if ((s_bLockUpdated)) {
+        StoreLockStatus(iPxHrPos, fLockStatus);
+    }
 }
 
 #endif // FFX_FSR2_LOCK_H

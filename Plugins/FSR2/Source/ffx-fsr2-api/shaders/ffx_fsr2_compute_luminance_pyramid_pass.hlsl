@@ -1,6 +1,6 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
 #define FSR2_BIND_UAV_SPD_GLOBAL_ATOMIC               0
 #define FSR2_BIND_UAV_EXPOSURE_MIP_LUMA_CHANGE        1
 #define FSR2_BIND_UAV_EXPOSURE_MIP_5                  2
-#define FSR2_BIND_UAV_AUTO_EXPOSURE                   3
+#define FSR2_BIND_UAV_EXPOSURE                        3
 #define FSR2_BIND_CB_FSR2                             0
 #define FSR2_BIND_CB_SPD                              1
 
@@ -33,61 +33,94 @@
 #if defined(FSR2_BIND_CB_SPD)
     cbuffer cbSPD : FFX_FSR2_DECLARE_CB(FSR2_BIND_CB_SPD) {
 
-        FfxUInt32   mips;
-        FfxUInt32   numWorkGroups;
-        FfxUInt32x2 workGroupOffset;
-        FfxUInt32x2 renderSize;
+        uint    mips;
+        uint    numWorkGroups;
+        uint2   workGroupOffset;
+        uint2   renderSize;
     };
 
-    FfxUInt32 MipCount()
+    uint MipCount()
     {
         return mips;
     }
 
-    FfxUInt32 NumWorkGroups()
+    uint NumWorkGroups()
     {
         return numWorkGroups;
     }
 
-    FfxUInt32x2 WorkGroupOffset()
+    uint2 WorkGroupOffset()
     {
         return workGroupOffset;
     }
 
-    FfxUInt32x2 SPD_RenderSize()
+    uint2 SPD_RenderSize()
     {
         return renderSize;
+    }
+#else
+    uint MipCount()
+    {
+        return 0;
+    }
+
+    uint NumWorkGroups()
+    {
+        return 0;
+    }
+
+    uint2 WorkGroupOffset()
+    {
+        return uint2(0, 0);
+    }
+
+    uint2 SPD_RenderSize()
+    {
+        return uint2(0, 0);
     }
 #endif
 
 
-FfxFloat32x2 SPD_LoadExposureBuffer()
+float2 SPD_LoadExposureBuffer()
 {
-    return rw_auto_exposure[FfxInt32x2(0,0)];
+#if defined(FSR2_BIND_UAV_EXPOSURE) || defined(FFX_INTERNAL)
+    return rw_exposure[min16int2(0,0)];
+#else
+    return 0;
+#endif
 }
 
-void SPD_SetExposureBuffer(FfxFloat32x2 value)
+void SPD_SetExposureBuffer(float2 value)
 {
-    rw_auto_exposure[FfxInt32x2(0,0)] = value;
+#if defined(FSR2_BIND_UAV_EXPOSURE) || defined(FFX_INTERNAL)
+    rw_exposure[min16int2(0,0)] = value;
+#endif
 }
 
-FfxFloat32x4 SPD_LoadMipmap5(FfxInt32x2 iPxPos)
+float4 SPD_LoadMipmap5(int2 iPxPos)
 {
-    return FfxFloat32x4(rw_img_mip_5[iPxPos], 0, 0, 0);
+#if defined(FSR2_BIND_UAV_EXPOSURE_MIP_5) || defined(FFX_INTERNAL)
+    return float4(rw_img_mip_5[iPxPos], 0, 0, 0);
+#else 
+    return 0;
+#endif
 }
 
-void SPD_SetMipmap(FfxInt32x2 iPxPos, FfxInt32 slice, FfxFloat32 value)
+void SPD_SetMipmap(int2 iPxPos, int slice, float value)
 {
     switch (slice)
     {
+#if defined(FSR2_BIND_UAV_EXPOSURE_MIP_LUMA_CHANGE) || defined(FFX_INTERNAL)
     case FFX_FSR2_SHADING_CHANGE_MIP_LEVEL:
         rw_img_mip_shading_change[iPxPos] = value;
         break;
+#endif
+#if defined(FSR2_BIND_UAV_EXPOSURE_MIP_5) || defined(FFX_INTERNAL)
     case 5:
         rw_img_mip_5[iPxPos] = value;
         break;
+#endif
     default:
-
         // avoid flattened side effect
 #if defined(FSR2_BIND_UAV_EXPOSURE_MIP_LUMA_CHANGE) || defined(FFX_INTERNAL)
         rw_img_mip_shading_change[iPxPos] = rw_img_mip_shading_change[iPxPos];
@@ -98,14 +131,14 @@ void SPD_SetMipmap(FfxInt32x2 iPxPos, FfxInt32 slice, FfxFloat32 value)
     }
 }
 
-void SPD_IncreaseAtomicCounter(inout FfxUInt32 spdCounter)
+void SPD_IncreaseAtomicCounter(inout uint spdCounter)
 {
-   InterlockedAdd(rw_spd_global_atomic[FfxInt32x2(0,0)], 1, spdCounter);
+   InterlockedAdd(rw_spd_global_atomic[min16int2(0,0)], 1, spdCounter);
 }
 
 void SPD_ResetAtomicCounter()
 {
-    rw_spd_global_atomic[FfxInt32x2(0,0)] = 0;
+    rw_spd_global_atomic[min16int2(0,0)] = 0;
 }
 
 #include "ffx_fsr2_compute_luminance_pyramid.h"
