@@ -1,6 +1,6 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -271,8 +271,6 @@ DXGI_FORMAT ffxGetDX12FormatFromSurfaceFormat(FfxSurfaceFormat surfaceFormat)
             return DXGI_FORMAT_R16_SNORM;
         case(FFX_SURFACE_FORMAT_R8_UNORM):
             return DXGI_FORMAT_R8_UNORM;
-        case(FFX_SURFACE_FORMAT_R8_UINT):
-            return DXGI_FORMAT_R8_UINT;
         case(FFX_SURFACE_FORMAT_R8G8_UNORM):
             return DXGI_FORMAT_R8G8_UNORM;
         case(FFX_SURFACE_FORMAT_R32_FLOAT):
@@ -326,8 +324,6 @@ FfxSurfaceFormat ffxGetSurfaceFormatDX12(DXGI_FORMAT format)
             return FFX_SURFACE_FORMAT_R16_SNORM;
         case(DXGI_FORMAT_R8_UNORM):
             return FFX_SURFACE_FORMAT_R8_UNORM;
-        case(DXGI_FORMAT_R8_UINT):
-            return FFX_SURFACE_FORMAT_R8_UINT;
         default:
             return FFX_SURFACE_FORMAT_UNKNOWN;
     }
@@ -376,15 +372,13 @@ FfxResource ffxGetResourceDX12(FfxFsr2Context* context, ID3D12Resource* dx12Reso
     return resource;
 }
 
-ID3D12Resource* ffxGetDX12ResourcePtr(FfxFsr2Context* context, uint32_t resId)
+ID3D12Resource* ffxGetDX12ResourcePtr(FfxFsr2Context* context, uint32_t uavResId)
 {
     FfxFsr2Context_Private* contextPrivate = (FfxFsr2Context_Private*)(context);
-    BackendContext_DX12* backendContext = (BackendContext_DX12*)(contextPrivate->contextDescription.callbacks.scratchBuffer);
+    contextPrivate->uavResources[uavResId].internalIndex;
 
-    if (resId > FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_TRANSPARENCY_AND_COMPOSITION_MASK)
-        return backendContext->resources[contextPrivate->uavResources[resId].internalIndex].resourcePtr;
-    else // Input resources are present only in srvResources array
-        return backendContext->resources[contextPrivate->srvResources[resId].internalIndex].resourcePtr;
+    BackendContext_DX12* backendContext = (BackendContext_DX12*)(contextPrivate->contextDescription.callbacks.scratchBuffer);
+    return backendContext->resources[contextPrivate->uavResources[uavResId].internalIndex].resourcePtr;
 }
 
 FfxErrorCode RegisterResourceDX12(
@@ -1002,7 +996,7 @@ FfxErrorCode CreatePipelineDX12(
     flags |= (canForceWave64) ? FSR2_SHADER_PERMUTATION_FORCE_WAVE64 : 0;
     flags |= (supportedFP16 && (pass != FFX_FSR2_PASS_RCAS)) ? FSR2_SHADER_PERMUTATION_ALLOW_FP16 : 0;
 
-    const Fsr2ShaderBlobDX12 shaderBlob = fsr2GetPermutationBlobByIndexDX12(pass, flags);
+    const Fsr2ShaderBlobDX12 shaderBlob = fsr2GetPermutationBlobByIndex(pass, flags);
     FFX_ASSERT(shaderBlob.data && shaderBlob.size);
 
     // set up root signature
@@ -1390,8 +1384,8 @@ static FfxErrorCode executeGpuJobCompute(BackendContext_DX12* backendContext, Ff
     // set root constants, free local copy
     {
         for (uint32_t currentRootConstantIndex = 0; currentRootConstantIndex < job->computeJobDescriptor.pipeline.constCount; ++currentRootConstantIndex) {
-            const uint32_t currentCbSlotIndex = job->computeJobDescriptor.pipeline.cbResourceBindings[currentRootConstantIndex].slotIndex;
-            dx12CommandList->SetComputeRoot32BitConstants(descriptorTableIndex + currentCbSlotIndex, job->computeJobDescriptor.cbs[currentCbSlotIndex].uint32Size, job->computeJobDescriptor.cbs[currentCbSlotIndex].data, 0);
+
+            dx12CommandList->SetComputeRoot32BitConstants(descriptorTableIndex + currentRootConstantIndex, job->computeJobDescriptor.cbs[currentRootConstantIndex].uint32Size, job->computeJobDescriptor.cbs[currentRootConstantIndex].data, 0);
         }
     }
 

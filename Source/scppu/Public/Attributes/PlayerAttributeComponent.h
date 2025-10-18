@@ -27,7 +27,7 @@ public:
 		FFloatAttribute MaxValue; // get set
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		FFloatAttribute RegenerationRate; // get set
+		FFloatAttribute RegenrationRate; // get set
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		FFloatAttribute RegenerationDelay; // get set

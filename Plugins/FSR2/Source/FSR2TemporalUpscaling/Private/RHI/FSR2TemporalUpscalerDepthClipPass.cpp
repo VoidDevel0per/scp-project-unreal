@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
 //
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,19 +31,10 @@ public:
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER_STRUCT_REF(FFSR2PassParameters, cbFSR2)
-		SHADER_PARAMETER_SAMPLER(SamplerState, s_LinearClamp)
 		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_reconstructed_previous_nearest_depth)
 		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_dilated_motion_vectors)
 		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_dilatedDepth)
-		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_reactive_mask)
-		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_transparency_and_composition_mask)
-		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_previous_dilated_motion_vectors)
-		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_input_motion_vectors)
-		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_input_color_jittered)
-		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_input_depth)
-		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, r_input_exposure)
-		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D, rw_dilated_reactive_masks)
-		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D, rw_prepared_input_color)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D, rw_depth_clip)
 	END_SHADER_PARAMETER_STRUCT()
 
 	using FPermutationDomain = FFSR2GlobalShader::FPermutationDomain;
@@ -58,31 +49,17 @@ public:
 	}
 	static uint32* GetBoundSRVs()
 	{
-		static uint32 SRVs[] = {
-			FFX_FSR2_RESOURCE_IDENTIFIER_RECONSTRUCTED_PREVIOUS_NEAREST_DEPTH,
-			FFX_FSR2_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS,
-			FFX_FSR2_RESOURCE_IDENTIFIER_DILATED_DEPTH,
-			FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_REACTIVE_MASK,
-			FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_TRANSPARENCY_AND_COMPOSITION_MASK,
-			FFX_FSR2_RESOURCE_IDENTIFIER_PREVIOUS_DILATED_MOTION_VECTORS,
-			FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_MOTION_VECTORS,
-			FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_COLOR,
-			FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_DEPTH,
-			FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_EXPOSURE
-		};
+		static uint32 SRVs[] = { FFX_FSR2_RESOURCE_IDENTIFIER_RECONSTRUCTED_PREVIOUS_NEAREST_DEPTH, FFX_FSR2_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS, FFX_FSR2_RESOURCE_IDENTIFIER_DILATED_DEPTH };
 		return SRVs;
 	}
 	static uint32* GetBoundUAVs()
 	{
-		static uint32 UAVs[] = {
-			FFX_FSR2_RESOURCE_IDENTIFIER_DILATED_REACTIVE_MASKS,
-			FFX_FSR2_RESOURCE_IDENTIFIER_PREPARED_INPUT_COLOR
-		};
+		static uint32 UAVs[] = { FFX_FSR2_RESOURCE_IDENTIFIER_DEPTH_CLIP };
 		return UAVs;
 	}
 	static uint32 GetNumBoundSRVs()
 	{
-		return 10;
+		return 3;
 	}
 	static uint32 GetNumBoundUAVs()
 	{
@@ -110,11 +87,13 @@ public:
 			{
 				case FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_FSR2:
 				{
-					FFSR2PassParameters Buffer;
-					FMemory::Memcpy(&Buffer, job->computeJobDescriptor.cbs[i].data, sizeof(FFSR2PassParameters));
-					Parameters->cbFSR2 = TUniformBufferRef<FFSR2PassParameters>::CreateUniformBufferImmediate(Buffer, UniformBuffer_SingleDraw);
+					FFSR2PassParameters PassParams;
+					FMemory::Memcpy(&PassParams, job->computeJobDescriptor.cbs[i].data, sizeof(FFSR2PassParameters));
+					Parameters->cbFSR2 = TUniformBufferRef<FFSR2PassParameters>::CreateUniformBufferImmediate(PassParams, UniformBuffer_SingleDraw);
 					break;
 				}
+				case FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_SPD:
+				case FFX_FSR2_CONSTANTBUFFER_IDENTIFIER_RCAS:
 				default:
 				{
 					break;
@@ -140,41 +119,6 @@ public:
 					Parameters->r_dilatedDepth = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
 					break;
 				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_REACTIVE_MASK:
-				{
-					Parameters->r_reactive_mask = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
-					break;
-				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_TRANSPARENCY_AND_COMPOSITION_MASK:
-				{
-					Parameters->r_transparency_and_composition_mask = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
-					break;
-				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_PREVIOUS_DILATED_MOTION_VECTORS:
-				{
-					Parameters->r_previous_dilated_motion_vectors = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
-					break;
-				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_MOTION_VECTORS:
-				{
-					Parameters->r_input_motion_vectors = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
-					break;
-				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_COLOR:
-				{
-					Parameters->r_input_color_jittered = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
-					break;
-				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_DEPTH:
-				{
-					Parameters->r_input_depth = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
-					break;
-				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_INPUT_EXPOSURE:
-				{
-					Parameters->r_input_exposure = Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.srvs[i].internalIndex);
-					break;
-				}
 				default:
 				{
 					break;
@@ -186,14 +130,9 @@ public:
 		{
 			switch (job->computeJobDescriptor.pipeline.uavResourceBindings[i].resourceIdentifier)
 			{
-				case FFX_FSR2_RESOURCE_IDENTIFIER_DILATED_REACTIVE_MASKS:
+				case FFX_FSR2_RESOURCE_IDENTIFIER_DEPTH_CLIP:
 				{
-					Parameters->rw_dilated_reactive_masks = GraphBuilder.CreateUAV(Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.uavs[i].internalIndex));
-					break;
-				}
-				case FFX_FSR2_RESOURCE_IDENTIFIER_PREPARED_INPUT_COLOR:
-				{
-					Parameters->rw_prepared_input_color = GraphBuilder.CreateUAV(Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.uavs[i].internalIndex));
+					Parameters->rw_depth_clip = GraphBuilder.CreateUAV(Context->GetRDGTexture(GraphBuilder, job->computeJobDescriptor.uavs[i].internalIndex));
 					break;
 				}
 				default:
@@ -202,8 +141,6 @@ public:
 				}
 			}
 		}
-
-		Parameters->s_LinearClamp = TStaticSamplerState<SF_Bilinear>::GetRHI();
 	}
 };
 IMPLEMENT_GLOBAL_SHADER(FFSR2DepthClipCS, "/Plugin/FSR2/Private/ffx_fsr2_depth_clip_pass.usf", "CS", SF_Compute);

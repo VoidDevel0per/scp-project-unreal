@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
 //
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,6 @@
 #pragma once
 
 #include "SceneViewExtension.h"
-#include "FSR2ScreenPercentageData.h"
 
 class FSR2TEMPORALUPSCALING_API FFSR2ViewExtension final : public FSceneViewExtensionBase
 {
@@ -35,8 +34,8 @@ public:
 	void BeginRenderViewFamily(FSceneViewFamily& InViewFamily) override;
 	void PreRenderViewFamily_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneViewFamily& InViewFamily) override;
 	void PreRenderView_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneView& InView) override;
-	void PostRenderViewFamily_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneViewFamily& InViewFamily) override;
 	void PrePostProcessPass_RenderThread(FRDGBuilder& GraphBuilder, const FSceneView& View, const FPostProcessingInputs& Inputs) override;
+	void PostRenderViewFamily_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneViewFamily& InViewFamily) override;
 
 private:
 	class ICustomStaticScreenPercentage* GFSR2CustomStaticScreenPercentage;
@@ -46,7 +45,6 @@ private:
 	float MinAutomaticViewMipBiasMin;
 	float MinAutomaticViewMipBiasOffset;
 	int32 VertexDeformationOutputsVelocity;
-	int32 VelocityEnableLandscapeGrass;
 	int32 BasePassForceOutputsVelocity;
 	int32 SeparateTranslucency;
 	int32 SSRExperimentalDenoiser;

@@ -1,6 +1,6 @@
-// This file is part of the FidelityFX Super Resolution 2.2 Unreal Engine Plugin.
+// This file is part of the FidelityFX Super Resolution 2.1 Unreal Engine Plugin.
 //
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,7 +19,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 #include "FSR2TemporalUpscaler.h"
-#include "FSR2TemporalUpscaling.h"
 #include "FSR2Include.h"
 #include "FSR2TemporalUpscalerHistory.h"
 #include "RHI/FSR2TemporalUpscalerRHIBackend.h"
@@ -38,6 +37,7 @@
 #if FSR2_ENABLE_VK
 #include "VulkanRHIBridge.h"
 #endif
+
 
 //------------------------------------------------------------------------------------------------------
 // GPU statistics for the FSR2 passes.
@@ -126,31 +126,17 @@ static TAutoConsoleVariable<float> CVarFSR2ReactiveMaskReflectionLumaBias(
 	ECVF_RenderThreadSafe
 );
 
-static TAutoConsoleVariable<float> CVarFSR2ReactiveHistoryTranslucencyBias(
-	TEXT("r.FidelityFX.FSR2.ReactiveHistoryTranslucencyBias"),
-	0.5f,
-	TEXT("Range from 0.0 to 1.0 (Default: 1.0), scales how much translucency suppresses history via the reactive mask. Higher values will make translucent materials more reactive which can reduce smearing."),
-	ECVF_RenderThreadSafe
-);
-
-static TAutoConsoleVariable<float> CVarFSR2ReactiveHistoryTranslucencyLumaBias(
-	TEXT("r.FidelityFX.FSR2.ReactiveHistoryTranslucencyLumaBias"),
-	0.0f,
-	TEXT("Range from 0.0 to 1.0 (Default 0.0), biases how much the translucency suppresses history via the reactive mask by the luminance of the transparency. Higher values will make bright translucent materials more reactive which can reduce smearing."),
-	ECVF_RenderThreadSafe
-);
-
 static TAutoConsoleVariable<float> CVarFSR2ReactiveMaskTranslucencyBias(
 	TEXT("r.FidelityFX.FSR2.ReactiveMaskTranslucencyBias"),
-	1.0f,
-	TEXT("Range from 0.0 to 1.0 (Default: 1.0), scales how much contribution translucency makes to the reactive mask. Higher values will make translucent materials more reactive which can reduce smearing."),
+	0.5f,
+	TEXT("Range from 0.0 to 1.0 (Default: 0.5), scales how much contribution translucency makes to the reactive mask. Higher values will make translucent materials more reactive which can reduce smearing."),
 	ECVF_RenderThreadSafe
 );
 
 static TAutoConsoleVariable<float> CVarFSR2ReactiveMaskTranslucencyLumaBias(
 	TEXT("r.FidelityFX.FSR2.ReactiveMaskTranslucencyLumaBias"),
-	0.0f,
-	TEXT("Range from 0.0 to 1.0 (Default 0.0), biases the translucency contribution to the reactive mask by the luminance of the transparency. Higher values will make bright translucent materials more reactive which can reduce smearing."),
+	0.8f,
+	TEXT("Range from 0.0 to 1.0 (Default 0.8), biases the translucency contribution by the luminance of the transparency. Higher values will make bright translucent materials more reactive which can reduce smearing."),
 	ECVF_RenderThreadSafe
 );
 
@@ -201,13 +187,6 @@ static TAutoConsoleVariable<int32> CVarFSR2UseNativeVulkan(
 	1,
 	TEXT("True to use FSR2's native & optimised Vulkan backend, false to use the fallback implementation based on Unreal's RHI. Default is 1."),
 	ECVF_ReadOnly
-);
-
-static TAutoConsoleVariable<int32> CVarFSR2QuantizeInternalTextures(
-	TEXT("r.FidelityFX.FSR2.QuantizeInternalTextures"),
-	0,
-	TEXT("Setting this to 1 will round up the size of some internal texture to ensure a specific divisibility. Default is 0."),
-	ECVF_RenderThreadSafe
 );
 
 static TAutoConsoleVariable<int32> CVarFSR2UseExperimentalSSRDenoiser(
@@ -304,8 +283,6 @@ public:
 		SHADER_PARAMETER(float, ReactiveMaskRoughnessScale)
 		SHADER_PARAMETER(float, ReactiveMaskRoughnessBias)
 		SHADER_PARAMETER(float, ReactiveMaskReflectionLumaBias)
-		SHADER_PARAMETER(float, ReactiveHistoryTranslucencyBias)
-		SHADER_PARAMETER(float, ReactiveHistoryTranslucencyLumaBias)
 		SHADER_PARAMETER(float, ReactiveMaskTranslucencyBias)
 		SHADER_PARAMETER(float, ReactiveMaskTranslucencyLumaBias)
 		SHADER_PARAMETER(float, ReactiveMaskPreDOFTranslucencyScale)
@@ -360,22 +337,23 @@ public:
 		OutEnvironment.SetDefine(TEXT("THREADGROUP_SIZEY"), ThreadgroupSizeY);
 		OutEnvironment.SetDefine(TEXT("THREADGROUP_SIZEZ"), ThreadgroupSizeZ);
 		OutEnvironment.SetDefine(TEXT("COMPUTE_SHADER"), 1);
+		OutEnvironment.SetDefine(TEXT("UNREAL_ENGINE_MAJOR_VERSION"), ENGINE_MAJOR_VERSION);
 	}
 };
 IMPLEMENT_GLOBAL_SHADER(FFSR2DeDitherCS, "/Plugin/FSR2/Private/PostProcessFFX_FSR2DeDither.usf", "MainCS", SF_Compute);
 
-struct FFSR2ShaderMapSwapState
+//------------------------------------------------------------------------------------------------------
+// Map of ScreenSpaceReflection shaders so that FSR2 can swizzle the shaders inside the GlobalShaderMap.
+// This is necessary so that FSR2 can access the ScreenSpaceReflection data through the ReflectionDenoiser plugin without changing their appearance. 
+//------------------------------------------------------------------------------------------------------
+struct FFSR2ShaderMap
 {
-	const FGlobalShaderMapContent* Content;
+	TMemoryImagePtr<FShader> DefaultShaders[(uint32)ESSRQuality::MAX];
+	TMemoryImagePtr<FShader> DenoiseShaders[(uint32)ESSRQuality::MAX];
+	uint32 DefaultIndex[(uint32)ESSRQuality::MAX];
+	uint32 DenoiseIndex[(uint32)ESSRQuality::MAX];
 	bool bSwapped;
-
-	static const FFSR2ShaderMapSwapState Default;
 };
-const FFSR2ShaderMapSwapState FFSR2ShaderMapSwapState::Default = { nullptr, false };
-
-// this object isn't conceptually linked to individual FSR2TemporalUpscalers.  it contains information about the state of an object in the global shader map,
-// and that information needs to be consistent across all FSR2TemporalUpscalers that might currently exist.
-static TMap<class FGlobalShaderMap*, FFSR2ShaderMapSwapState> SSRShaderMapSwapState;
 
 //------------------------------------------------------------------------------------------------------
 // The FFSR2ShaderMapContent structure allows access to the internals of FShaderMapContent so that FSR2 can swap the Default & Denoised variants of ScreenSpaceReflections.
@@ -615,7 +593,6 @@ struct FFSR2Pass
 //------------------------------------------------------------------------------------------------------
 // FFSR2TemporalUpscaler implementation.
 //------------------------------------------------------------------------------------------------------
-
 FFSR2TemporalUpscaler::FFSR2TemporalUpscaler()
 : Api(EFSR2TemporalUpscalerAPI::Unknown)
 , ApiAccessor(nullptr)
@@ -644,6 +621,10 @@ FFSR2TemporalUpscaler::~FFSR2TemporalUpscaler()
 	if (ApiAccessor)
 	{
 		delete ApiAccessor;
+	}
+	for (auto Pair : SSRShaderMaps)
+	{
+		delete Pair.Value;
 	}
 	FFXSystemInterface::UnregisterCustomFXSystem(FFSR2FXSystem::FXName);
 }
@@ -679,20 +660,6 @@ float FFSR2TemporalUpscaler::GetResolutionFraction(uint32 Mode)
 	const float ResolutionFraction = FSR2_GetScreenResolutionFromScalingMode(QualityMode);
 	return ResolutionFraction;
 }
-
-#if DO_CHECK || DO_GUARD_SLOW || DO_ENSURE
-void FFSR2TemporalUpscaler::OnFSR2Message(FfxFsr2MsgType type, const wchar_t* message)
-{
-	if (type == FFX_FSR2_MESSAGE_TYPE_ERROR)
-	{
-		UE_LOG(LogFSR2API, Error, TEXT("%s"), message);
-	}
-	else if (type == FFX_FSR2_MESSAGE_TYPE_WARNING)
-	{
-		UE_LOG(LogFSR2API, Warning, TEXT("%s"), message);
-	}
-}
-#endif // DO_CHECK || DO_GUARD_SLOW || DO_ENSURE
 
 FRDGBuilder* FFSR2TemporalUpscaler::GetGraphBuilder()
 {
@@ -757,23 +724,21 @@ void FFSR2TemporalUpscaler::AddPasses(
 	FRDGTextureRef* OutSceneColorHalfResTexture,
 	FIntRect* OutSceneColorHalfResViewRect) const
 {
-	const FRDGTextureRef SceneColorTexture = PassInputs.SceneColorTexture;
-	const FRDGTextureRef SceneDepthTexture = PassInputs.SceneDepthTexture;
 	// In the MovieRenderPipeline the output extents can be smaller than the input, FSR2 doesn't handle that.
 	// In that case we shall fall back to the default upscaler so we render properly.
 	FIntPoint InputExtents = View.ViewRect.Size();
-	FIntPoint InputExtentsQuantized;
-	FIntPoint OutputExtents = View.GetSecondaryViewRectSize();
-	FIntPoint OutputExtentsQuantized;
+	FIntPoint InputExtentsQuantized = View.ViewRect.Size();
+	FIntPoint OutputExtents;
+	QuantizeSceneBufferSize(View.GetSecondaryViewRectSize(), OutputExtents);
 	OutputExtents = FIntPoint(FMath::Max(InputExtents.X, OutputExtents.X), FMath::Max(InputExtents.Y, OutputExtents.Y));
 
 	Initialize();
 
 	bool const bValidEyeAdaptation = View.HasValidEyeAdaptationTexture();
-	bool const bRequestedAutoExposure = static_cast<bool>(CVarFSR2AutoExposure.GetValueOnRenderThread());
-	bool const bUseAutoExposure = bRequestedAutoExposure || !bValidEyeAdaptation;
+	bool const bWaveOps = FDataDrivenShaderPlatformInfo::GetSupportsWaveOperations(View.GetShaderPlatform());
+	bool const bHasAutoExposure = (bValidEyeAdaptation || CVarFSR2AutoExposure.GetValueOnRenderThread());
 
-	if (IsApiSupported() && (View.PrimaryScreenPercentageMethod == EPrimaryScreenPercentageMethod::TemporalUpscale) && (InputExtents.X < OutputExtents.X) && (InputExtents.Y < OutputExtents.Y))
+	if (IsApiSupported() && (View.PrimaryScreenPercentageMethod == EPrimaryScreenPercentageMethod::TemporalUpscale) && bHasAutoExposure && (InputExtents.X < OutputExtents.X) && (InputExtents.Y < OutputExtents.Y))
 	{
 		RDG_GPU_STAT_SCOPE(GraphBuilder, FidelityFXSuperResolution2Pass);
 		RDG_EVENT_SCOPE(GraphBuilder, "FidelityFXSuperResolution2Pass");
@@ -788,31 +753,28 @@ void FFSR2TemporalUpscaler::AddPasses(
 
 		FRDGTextureRef SceneColor = PassInputs.SceneColorTexture;
 		FRDGTextureRef SceneDepth = PassInputs.SceneDepthTexture;
-		FRDGTextureRef VelocityTexture = PassInputs.SceneVelocityTexture;
 
 		// Quantize the buffers to match UE behavior
-		QuantizeSceneBufferSize(InputExtents, InputExtentsQuantized);
-		QuantizeSceneBufferSize(OutputExtents, OutputExtentsQuantized);
+		QuantizeSceneBufferSize(View.ViewRect.Size(), InputExtentsQuantized);
 
 		//------------------------------------------------------------------------------------------------------
 		// Create Reactive Mask
 		//   Create a reactive mask from separate translucency.
 		//------------------------------------------------------------------------------------------------------
-		
+		FRDGTextureRef VelocityTexture = PassInputs.SceneVelocityTexture;
 		if (!VelocityTexture)
 		{
 			VelocityTexture = (*PostInputs.SceneTextures)->GBufferVelocityTexture;
 		}
 
-		FIntPoint InputTextureExtents = CVarFSR2QuantizeInternalTextures.GetValueOnRenderThread() ? InputExtentsQuantized : InputExtents;
 		FRDGTextureSRVDesc DepthDesc = FRDGTextureSRVDesc::Create(SceneDepth);
 		FRDGTextureSRVDesc VelocityDesc = FRDGTextureSRVDesc::Create(VelocityTexture);
-		FRDGTextureDesc ReactiveMaskDesc = FRDGTextureDesc::Create2D(InputTextureExtents, PF_R8, FClearValueBinding::Black, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable);
+		FRDGTextureDesc ReactiveMaskDesc = FRDGTextureDesc::Create2D(InputExtentsQuantized, PF_R8, FClearValueBinding::Black, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable);
 		FRDGTextureRef ReactiveMaskTexture = nullptr;
-		FRDGTextureDesc CompositeMaskDesc = FRDGTextureDesc::Create2D(InputTextureExtents, PF_R8, FClearValueBinding::Black, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable);
+		FRDGTextureDesc CompositeMaskDesc = FRDGTextureDesc::Create2D(InputExtentsQuantized, PF_R8, FClearValueBinding::Black, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable);
 		FRDGTextureRef CompositeMaskTexture = nullptr;
-		FRDGTextureDesc SceneColorDesc = FRDGTextureDesc::Create2D(InputTextureExtents, SceneColor->Desc.Format, FClearValueBinding::Black, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable);
-
+		FRDGTextureDesc SceneColorDesc = FRDGTextureDesc::Create2D(InputExtentsQuantized, SceneColor->Desc.Format, FClearValueBinding::Black, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable);
+		
 		if (CVarFSR2CreateReactiveMask.GetValueOnRenderThread())
 		{
 			ReactiveMaskTexture = GraphBuilder.CreateTexture(ReactiveMaskDesc, TEXT("FSR2ReactiveMaskTexture"));
@@ -820,7 +782,6 @@ void FFSR2TemporalUpscaler::AddPasses(
 			{
 				FFSR2CreateReactiveMaskCS::FParameters* PassParameters = GraphBuilder.AllocParameters<FFSR2CreateReactiveMaskCS::FParameters>();
 				PassParameters->Sampler = TStaticSamplerState<SF_Point>::GetRHI();
-
 				FRDGTextureRef SeparateTranslucency;
 				FSeparateTranslucencyTexturesAccessor const* Accessor = reinterpret_cast<FSeparateTranslucencyTexturesAccessor const*>(PostInputs.SeparateTranslucencyTextures);
 				if (Accessor && Accessor->ColorTexture.IsValid())
@@ -907,10 +868,10 @@ void FFSR2TemporalUpscaler::AddPasses(
 				FRDGTextureSRVDesc GBufferBDesc = FRDGTextureSRVDesc::Create(GBufferB);
 				FRDGTextureSRVDesc GBufferDDesc = FRDGTextureSRVDesc::Create(GBufferD);
 				FRDGTextureSRVDesc ReflectionsDesc = FRDGTextureSRVDesc::Create(Reflections);
+				FRDGTextureSRVDesc InputDesc = FRDGTextureSRVDesc::Create(SeparateTranslucency);
 				FRDGTextureUAVDesc ReactiveDesc(ReactiveMaskTexture);
 				FRDGTextureUAVDesc CompositeDesc(CompositeMaskTexture);
 
-				FRDGTextureSRVDesc InputDesc = FRDGTextureSRVDesc::Create(SeparateTranslucency);
 				PassParameters->InputSeparateTranslucency = GraphBuilder.CreateSRV(InputDesc);
 				PassParameters->GBufferB = GraphBuilder.CreateSRV(GBufferBDesc);
 				PassParameters->GBufferD = GraphBuilder.CreateSRV(GBufferDDesc);
@@ -926,8 +887,6 @@ void FFSR2TemporalUpscaler::AddPasses(
 				PassParameters->ReactiveMaskRoughnessScale = CVarFSR2ReactiveMaskRoughnessScale.GetValueOnRenderThread();
 				PassParameters->ReactiveMaskRoughnessBias = CVarFSR2ReactiveMaskRoughnessBias.GetValueOnRenderThread();
 				PassParameters->ReactiveMaskReflectionLumaBias = CVarFSR2ReactiveMaskReflectionLumaBias.GetValueOnRenderThread();
-				PassParameters->ReactiveHistoryTranslucencyBias = CVarFSR2ReactiveHistoryTranslucencyBias.GetValueOnRenderThread();
-				PassParameters->ReactiveHistoryTranslucencyLumaBias = CVarFSR2ReactiveHistoryTranslucencyLumaBias.GetValueOnRenderThread();
 				PassParameters->ReactiveMaskTranslucencyBias = CVarFSR2ReactiveMaskTranslucencyBias.GetValueOnRenderThread();
 				PassParameters->ReactiveMaskTranslucencyLumaBias = CVarFSR2ReactiveMaskTranslucencyLumaBias.GetValueOnRenderThread();
 				PassParameters->ReactiveMaskPreDOFTranslucencyScale = CVarFSR2ReactiveMaskPreDOFTranslucencyScale.GetValueOnRenderThread();
@@ -964,7 +923,8 @@ void FFSR2TemporalUpscaler::AddPasses(
 			FRDGTextureRef GBufferB = (*PostInputs.SceneTextures)->GBufferBTexture;
 			FRDGTextureSRVDesc GBufferBDesc = FRDGTextureSRVDesc::Create(GBufferB);
 			PassParameters->GBufferB = GraphBuilder.CreateSRV(GBufferBDesc);
-			FRDGTextureSRVDesc SceneColorSRV = FRDGTextureSRVDesc::Create(SceneColorTexture);
+
+			FRDGTextureSRVDesc SceneColorSRV = FRDGTextureSRVDesc::Create(PassInputs.SceneColorTexture);
 			PassParameters->SceneColor = GraphBuilder.CreateSRV(SceneColorSRV);
 
 			PassParameters->View = View.ViewUniformBuffer;
@@ -985,7 +945,7 @@ void FFSR2TemporalUpscaler::AddPasses(
 				ComputeShaderFSR,
 				PassParameters,
 				FComputeShaderUtils::GetGroupCount(FIntVector(SceneColor->Desc.Extent.X, SceneColor->Desc.Extent.Y, 1),
-				FIntVector(FFSR2DeDitherCS::ThreadgroupSizeX, FFSR2DeDitherCS::ThreadgroupSizeY, FFSR2DeDitherCS::ThreadgroupSizeZ))
+					FIntVector(FFSR2DeDitherCS::ThreadgroupSizeX, FFSR2DeDitherCS::ThreadgroupSizeY, FFSR2DeDitherCS::ThreadgroupSizeZ))
 			);
 		}
 
@@ -1030,7 +990,7 @@ void FFSR2TemporalUpscaler::AddPasses(
 
 				AddCopyTexturePass(
 					GraphBuilder,
-					SceneColorTexture,
+					PassInputs.SceneColorTexture,
 					SceneColor,
 					View.ViewRect.Min,
 					FIntPoint::ZeroValue,
@@ -1042,7 +1002,7 @@ void FFSR2TemporalUpscaler::AddPasses(
 
 			AddCopyTexturePass(
 					GraphBuilder,
-					SceneDepthTexture,
+					PassInputs.SceneDepthTexture,
 					SceneDepth,
 					View.ViewRect.Min,
 					FIntPoint::ZeroValue,
@@ -1057,7 +1017,7 @@ void FFSR2TemporalUpscaler::AddPasses(
 		const bool bSupportsAlpha = (CVarPostPropagateAlpha && CVarPostPropagateAlpha->GetValueOnRenderThread() != 0);
 		EPixelFormat OutputFormat = (bSupportsAlpha || (CVarFSR2HistoryFormat.GetValueOnRenderThread() == 0)) ? PF_FloatRGBA : PF_FloatR11G11B10;
 
-		FRDGTextureDesc OutputColorDesc = FRDGTextureDesc::Create2D(OutputExtentsQuantized, OutputFormat, FClearValueBinding::Black, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable);
+		FRDGTextureDesc OutputColorDesc = FRDGTextureDesc::Create2D(OutputExtents, OutputFormat, FClearValueBinding::Black, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable);
 		FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputColorDesc, TEXT("FSR2OutputTexture"));
 
 		*OutSceneColorTexture = OutputTexture;
@@ -1074,7 +1034,7 @@ void FFSR2TemporalUpscaler::AddPasses(
 		//   If a context has never been created, or if significant features of the frame have changed since the current context was created, tear down any existing contexts and create a new one matching the current frame.
 		//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 		FSR2StateRef FSR2State;
-		const TRefCountPtr<IFSR2CustomTemporalAAHistory> PrevCustomHistory = View.PrevViewInfo.CustomTemporalAAHistory;
+		const TRefCountPtr<ICustomTemporalAAHistory> PrevCustomHistory = View.PrevViewInfo.CustomTemporalAAHistory;
 		FFSR2TemporalUpscalerHistory* CustomHistory = static_cast<FFSR2TemporalUpscalerHistory*>(PrevCustomHistory.GetReference());
 		{
 			// FSR setup
@@ -1113,8 +1073,8 @@ void FFSR2TemporalUpscaler::AddPasses(
 			{
 				// Engine params:
 				Params.flags = 0;
-				Params.flags |= bool(ERHIZBuffer::IsInverted) ? FFX_FSR2_ENABLE_DEPTH_INVERTED : 0;
-				Params.flags |= FFX_FSR2_ENABLE_HIGH_DYNAMIC_RANGE | FFX_FSR2_ENABLE_DEPTH_INFINITE;
+				Params.flags |= bool(ERHIZBuffer::IsInverted) ? FFX_FSR2_ENABLE_DEPTH_INVERTED  : 0;
+				Params.flags |= FFX_FSR2_ENABLE_HIGH_DYNAMIC_RANGE;
 				Params.flags |= ((DynamicResolutionStateInfos.Status == EDynamicResolutionStatus::Enabled) || (DynamicResolutionStateInfos.Status == EDynamicResolutionStatus::DebugForceEnabled)) ? FFX_FSR2_ENABLE_DYNAMIC_RESOLUTION : 0;
 				Params.displaySize.height = OutputExtents.Y;
 				Params.displaySize.width = OutputExtents.X;
@@ -1123,13 +1083,7 @@ void FFSR2TemporalUpscaler::AddPasses(
 
 				// CVar params:
 				// Compute Auto Exposure requires wave operations or D3D12.
-				Params.flags |= bUseAutoExposure ? FFX_FSR2_ENABLE_AUTO_EXPOSURE : 0;
-
-#if DO_CHECK || DO_GUARD_SLOW || DO_ENSURE
-				// Register message callback
-				Params.flags |= FFX_FSR2_ENABLE_DEBUG_CHECKING;
-				Params.fpMessage = &FFSR2TemporalUpscaler::OnFSR2Message;
-#endif // DO_CHECK || DO_GUARD_SLOW || DO_ENSURE
+				Params.flags |= CVarFSR2AutoExposure.GetValueOnRenderThread() ? FFX_FSR2_ENABLE_AUTO_EXPOSURE : 0;
 			}
 
 			// We want to reuse FSR2 states rather than recreating them wherever possible as they allocate significant memory for their internal resources.
@@ -1148,7 +1102,7 @@ void FFSR2TemporalUpscaler::AddPasses(
 					FSR2State = CustomHistory->GetState();
 				}
 			}
-
+			
 			if (!HasValidContext)
 			{
 				TLockFreePointerListFIFO<FFSR2State, PLATFORM_CACHE_LINE_SIZE> ReusableStates;
@@ -1156,9 +1110,9 @@ void FFSR2TemporalUpscaler::AddPasses(
 				while (Ptr)
 				{
 					FfxFsr2ContextDescription const& CurrentParams = Ptr->Params;
-					if (Ptr->LastUsedFrame == GFrameCounterRenderThread && Ptr->ViewID != View.ViewState->UniqueID)
+					if (Ptr->LastUsedFrame == GFrameCounterRenderThread)
 					{
-						// These states can't be reused immediately but perhaps a future frame, otherwise we break split screen.
+						// These states can't be reused immediately but perhaps a future frame.
 						ReusableStates.Push(Ptr);
 					}
 					else if ((CurrentParams.maxRenderSize.width < Params.maxRenderSize.width) || (CurrentParams.maxRenderSize.height < Params.maxRenderSize.height) || (CurrentParams.displaySize.width != Params.displaySize.width) || (CurrentParams.displaySize.height != Params.displaySize.height) || (Params.flags != CurrentParams.flags) || (Params.device != CurrentParams.device))
@@ -1201,11 +1155,10 @@ void FFSR2TemporalUpscaler::AddPasses(
 #if FSR2_ENABLE_VK
 					case EFSR2TemporalUpscalerAPI::Vulkan:
 					{
-						FVulkanDevice* DeviceObj = VulkanRHIBridge::GetDevice((FVulkanDynamicRHI*)GDynamicRHI);
-						VkPhysicalDevice VulkanDevice = reinterpret_cast<VkPhysicalDevice>((uintptr_t)VulkanRHIBridge::GetPhysicalDevice(DeviceObj));
-						ScratchSize = ffxFsr2GetScratchMemorySizeVK(VulkanDevice);
+						FVulkanDevice* VulkanDevice = VulkanRHIBridge::GetDevice((FVulkanDynamicRHI*)GDynamicRHI);
+						ScratchSize = ffxFsr2GetScratchMemorySizeVK(reinterpret_cast<VkPhysicalDevice>((uintptr_t)VulkanRHIBridge::GetPhysicalDevice(VulkanDevice)));
 						break;
-				}
+					}
 #endif
 					default:
 					{
@@ -1218,7 +1171,6 @@ void FFSR2TemporalUpscaler::AddPasses(
 			}
 
 			FSR2State->LastUsedFrame = GFrameCounterRenderThread;
-			FSR2State->ViewID = View.ViewState->UniqueID;
 
 			//-------------------------------------------------------------------------------------------------------------------------------------------------
 			// Update History Data (Part 1)
@@ -1273,9 +1225,8 @@ void FFSR2TemporalUpscaler::AddPasses(
 #if FSR2_ENABLE_VK
 					case EFSR2TemporalUpscalerAPI::Vulkan:
 					{
-						FVulkanDevice* DeviceObj = VulkanRHIBridge::GetDevice((FVulkanDynamicRHI*)GDynamicRHI);
-						VkPhysicalDevice VulkanDevice = reinterpret_cast<VkPhysicalDevice>((uintptr_t)VulkanRHIBridge::GetPhysicalDevice(DeviceObj));
-						ffxFsr2UEGetInterfaceVK(&Params.callbacks, FSR2State->ScratchBuffer, FSR2State->ScratchSize, VulkanDevice);
+						FVulkanDevice* VulkanDevice = VulkanRHIBridge::GetDevice((FVulkanDynamicRHI*)GDynamicRHI);
+						ffxFsr2UEGetInterfaceVK(&Params.callbacks, FSR2State->ScratchBuffer, FSR2State->ScratchSize, reinterpret_cast<VkPhysicalDevice>((uintptr_t)VulkanRHIBridge::GetPhysicalDevice(VulkanDevice)));
 						break;
 					}
 #endif
@@ -1310,8 +1261,7 @@ void FFSR2TemporalUpscaler::AddPasses(
 			Fsr2DispatchParams.sharpness = FMath::Clamp(CVarFSR2Sharpness.GetValueOnRenderThread(), 0.0f, 1.0f);
 
 			// Engine parameters:
-			Fsr2DispatchParams.frameTimeDelta = View.Family->DeltaWorldTime * 1000.0f;
-
+			Fsr2DispatchParams.frameTimeDelta = View.Family->DeltaWorldTime;
 			Fsr2DispatchParams.jitterOffset.x = View.TemporalJitterPixels.X;
 			Fsr2DispatchParams.jitterOffset.y = View.TemporalJitterPixels.Y;
 			Fsr2DispatchParams.preExposure = View.PreExposure;
@@ -1327,16 +1277,8 @@ void FFSR2TemporalUpscaler::AddPasses(
 			Fsr2DispatchParams.cameraFovAngleVertical = View.ViewMatrices.ComputeHalfFieldOfViewPerAxis().Y * 2.0f;
 
 			// Unused parameters:
-			if (bool(ERHIZBuffer::IsInverted))
-			{
-				Fsr2DispatchParams.cameraNear = FLT_MAX;
-				Fsr2DispatchParams.cameraFar = GNearClippingPlane;
-			}
-			else
-			{
-				Fsr2DispatchParams.cameraNear = GNearClippingPlane;
-				Fsr2DispatchParams.cameraFar = FLT_MAX;
-			}
+			Fsr2DispatchParams.cameraNear = 0;
+			Fsr2DispatchParams.cameraFar = 0;
 		}
 
 		//------------------------------
@@ -1562,6 +1504,7 @@ void FFSR2TemporalUpscaler::SetupMainGameViewFamily(FSceneViewFamily& InViewFami
 	}
 }
 
+#if FSR2_ENGINE_SUPPORTS_SCREENPERCENTAGEDATA
 void FFSR2TemporalUpscaler::SetupViewFamily(FSceneViewFamily& ViewFamily, TSharedPtr<ICustomStaticScreenPercentageData> ScreenPercentageDataInterface)
 {
 	check(ScreenPercentageDataInterface.IsValid());
@@ -1585,6 +1528,7 @@ void FFSR2TemporalUpscaler::SetupViewFamily(FSceneViewFamily& ViewFamily, TShare
 		ViewFamily.SetScreenPercentageInterface(new FLegacyScreenPercentageDriver(ViewFamily, ResolutionFraction, false));
 	}
 }
+#endif
 
 float FFSR2TemporalUpscaler::GetMinUpsampleResolutionFraction() const
 {
@@ -1616,67 +1560,68 @@ float FFSR2TemporalUpscaler::GetMaxUpsampleResolutionFraction() const
 //-------------------------------------------------------------------------------------
 void FFSR2TemporalUpscaler::SetSSRShader(FGlobalShaderMap* GlobalMap)
 {
-	static const FHashedName SSRSourceFile(TEXT("/Engine/Private/SSRT/SSRTReflections.usf"));
-	static const FHashedName SSRPixelShader(TEXT("FScreenSpaceReflectionsPS"));
-
 	static const auto CVarFSR2Enabled = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.FidelityFX.FSR2.Enabled"));
-	const bool bShouldBeSwapped = (CVarFSR2Enabled && (CVarFSR2Enabled->GetValueOnAnyThread() != 0) && (CVarFSR2UseExperimentalSSRDenoiser.GetValueOnAnyThread() == 0));
-
-	FGlobalShaderMapSection* Section = GlobalMap->FindSection(SSRSourceFile);
+	FGlobalShaderMapSection* Section = GlobalMap->FindSection(FHashedName(TEXT("/Engine/Private/SSRT/SSRTReflections.usf")));
 	if (Section)
 	{
-		// accessing SSRShaderMapSwapState is not thread-safe
-		check(IsInGameThread());
+		FShaderMapContent* Content = (FShaderMapContent*)Section->GetContent();
+		FFSR2ShaderMapContent* PublicContent = (FFSR2ShaderMapContent*)Content;
 
-		FFSR2ShaderMapSwapState& ShaderMapSwapState = SSRShaderMapSwapState.FindOrAdd(GlobalMap, FFSR2ShaderMapSwapState::Default);
-		if (ShaderMapSwapState.Content != Section->GetContent())
+		bool bSwapped = (CVarFSR2Enabled && (CVarFSR2Enabled->GetValueOnAnyThread() != 0) && (CVarFSR2UseExperimentalSSRDenoiser.GetValueOnAnyThread() == 0));
+		FFSR2ShaderMap** Ptr = SSRShaderMaps.Find(GlobalMap);
+		if (!Ptr && (CVarFSR2Enabled && (CVarFSR2Enabled->GetValueOnAnyThread() != 0)))
 		{
-			ShaderMapSwapState.Content = Section->GetContent();
-			ShaderMapSwapState.bSwapped = false;
-		}
-
-		if (bShouldBeSwapped != ShaderMapSwapState.bSwapped)
-		{	
-#if WITH_EDITORONLY_DATA
-			const bool WasFrozen = Section->GetFrozenContentSize() > 0u;
-			FShaderMapContent* Content = (FShaderMapContent*)Section->GetMutableContent();
-#else
-			FShaderMapContent* Content = (FShaderMapContent*)Section->GetContent();
-#endif
-
-			FFSR2ShaderMapContent* PublicContent = (FFSR2ShaderMapContent*)Content;
-
+			FFSR2ShaderMap* NewMap = new FFSR2ShaderMap;
 			for (uint32 i = 0; i < (uint32)ESSRQuality::MAX; i++)
 			{
-				FFSR2ScreenSpaceReflectionsPS::FPermutationDomain DefaultPermutationVector;
-				DefaultPermutationVector.Set<FSSRQualityDim>((ESSRQuality)i);
-				DefaultPermutationVector.Set<FSSROutputForDenoiser>(false);
+				FFSR2ScreenSpaceReflectionsPS::FPermutationDomain PermutationVector;
+				PermutationVector.Set<FSSRQualityDim>((ESSRQuality)i);
+				PermutationVector.Set<FSSROutputForDenoiser>(false);
 
-				FFSR2ScreenSpaceReflectionsPS::FPermutationDomain DenoisePermutationVector;
-				DenoisePermutationVector.Set<FSSRQualityDim>((ESSRQuality)i);
-				DenoisePermutationVector.Set<FSSROutputForDenoiser>(true);
+				FFSR2ScreenSpaceReflectionsPS::FPermutationDomain OldPermutationVector;
+				OldPermutationVector.Set<FSSRQualityDim>((ESSRQuality)i);
+				OldPermutationVector.Set<FSSROutputForDenoiser>(true);
 
-				// for this very small and simple shader map, index == permutation id
-				const uint32 CurrentDefaultIndex = DefaultPermutationVector.ToDimensionValueId(), CurrentDenoiseIndex = DenoisePermutationVector.ToDimensionValueId();
-				checkSlow(PublicContent->Shaders[CurrentDefaultIndex].GetChecked() == Content->GetShader(SSRPixelShader, DefaultPermutationVector.ToDimensionValueId())
-					   && PublicContent->Shaders[CurrentDenoiseIndex].GetChecked() == Content->GetShader(SSRPixelShader, DenoisePermutationVector.ToDimensionValueId()));
-				
-				FShader* CurrentDefaultShader = PublicContent->Shaders[CurrentDefaultIndex];
-				PublicContent->Shaders[CurrentDefaultIndex] = PublicContent->Shaders[CurrentDenoiseIndex];
-				PublicContent->Shaders[CurrentDenoiseIndex] = CurrentDefaultShader;
+				if (Section)
+				{
+					FShader* NewShader = Content->GetShader(FHashedName(TEXT("FScreenSpaceReflectionsPS")), PermutationVector.ToDimensionValueId());
+					FShader* OldShader = Content->GetShader(FHashedName(TEXT("FScreenSpaceReflectionsPS")), OldPermutationVector.ToDimensionValueId());
+					NewMap->DefaultShaders[i] = NewShader;
+					NewMap->DenoiseShaders[i] = OldShader;
+					for (uint32 j = 0; j < (uint32)PublicContent->Shaders.Num(); j++)
+					{
+						if (PublicContent->Shaders[j].GetChecked() == NewShader)
+						{
+							NewMap->DefaultIndex[i] = j;
+							break;
+						}
+					}
+					for (uint32 j = 0; j < (uint32)PublicContent->Shaders.Num(); j++)
+					{
+						if (PublicContent->Shaders[j].GetChecked() == OldShader)
+						{
+							NewMap->DenoiseIndex[i] = j;
+							break;
+						}
+					}
+				}
 			}
-
-#if WITH_EDITORONLY_DATA
-			// Calling FinalizeContent() is only correct in editor, and if the section was already frozen when we started.
-			// if the section wasn't frozen, it hadn't finished loading yet... so how did we get here?
-			if (ensure(WasFrozen))
+			NewMap->bSwapped = !bSwapped;
+			Ptr = &SSRShaderMaps.Add(GlobalMap, NewMap);
+		}
+		
+		if (Ptr)
+		{
+			FFSR2ShaderMap* Map = *Ptr;
+			if (Map->bSwapped != bSwapped)
 			{
-				Section->FinalizeContent();
-				ShaderMapSwapState.Content = Section->GetContent();
+				Map->bSwapped = bSwapped;
+				for (uint32 i = 0; i < (uint32)ESSRQuality::MAX; i++)
+				{
+					PublicContent->Shaders[Map->DefaultIndex[i]] = Map->bSwapped ? Map->DenoiseShaders[i] : Map->DefaultShaders[i];
+					PublicContent->Shaders[Map->DenoiseIndex[i]] = Map->bSwapped ? Map->DefaultShaders[i] : Map->DenoiseShaders[i];
+				}
 			}
-#endif
-
-			ShaderMapSwapState.bSwapped = bShouldBeSwapped;
 		}
 	}
 }
@@ -1690,7 +1635,7 @@ void FFSR2TemporalUpscaler::CopyOpaqueSceneColor(FRHICommandListImmediate& RHICm
 	static const auto CVarFSR2Enabled = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.FidelityFX.FSR2.Enabled"));
 	FTextureRHIRef SceneColor;
 	SceneColor = FSceneRenderTargets::Get(RHICmdList).GetSceneColorTexture();
-	if (IsApiSupported() && (CVarFSR2Enabled && CVarFSR2Enabled->GetValueOnRenderThread()) && SceneColorPreAlpha.GetReference() && SceneColor.GetReference() && SceneColorPreAlpha->GetFormat() == SceneColor->GetFormat())
+	if (IsApiSupported() && (CVarFSR2Enabled && CVarFSR2Enabled->GetValueOnRenderThread()) && SceneColorPreAlpha.GetReference() && ViewUniformBuffer && SceneTexturesUniformBuffer && SceneColor.GetReference())
 	{
 		SCOPED_DRAW_EVENTF(RHICmdList, FSR2TemporalUpscaler_CopyOpaqueSceneColor, TEXT("FSR2TemporalUpscaler CopyOpaqueSceneColor"));
 
